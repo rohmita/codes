@@ -23,7 +23,7 @@ Generator parametrik berbasis browser untuk **desk organizer** siap cetak 3D (FD
 
 ## Fitur
 
-- 12 preset, pemilih jenis objek, UI dibangun dari `SCHEMA`.
+- **53 preset** dikelompokkan per jenis objek (dropdown + tombol ‹ › untuk menelusuri), pemilih jenis objek, UI dibangun dari `SCHEMA`.
 - Viewport: mode **Assembled** / **Print plate** (semua part dalam orientasi cetak), slider buka laci, referensi ukuran (pena, ponsel/tablet, kartu, kabel), section cut Y/X/Z, tema gelap/terang, layout mobile.
 - HUD: ukuran, kapasitas (ml), estimasi filamen (gram & meter, sesuai infill), estimasi waktu cetak, status mesh *watertight*, peringatan.
 - Ekspor: STL plate (Z-up), OBJ berwarna, GLB, PNG 2048 px transparan, JSON, ZIP (plate + STL per part + `PRINT_GUIDE.txt`).
@@ -32,7 +32,7 @@ Generator parametrik berbasis browser untuk **desk organizer** siap cetak 3D (FD
 
 Semua objek dibangun dari dua primitif tertutup (prisma berkantong dan ekstrusi profil). Parameter yang bentrok (sudut terlalu bulat, lubang terlalu dekat tepi, dll.) otomatis dibatasi dengan peringatan.
 
-Uji: `npm test` (atau `node test/objects.test.mjs <seed> <n>`): 12 preset + 1.050 konfigurasi acak per seed di seluruh rentang parameter → semua part watertight, tanpa kantong menembus dinding.
+Uji: `npm test` (atau `node test/objects.test.mjs <seed> <n>`): 53 preset + 1.050 konfigurasi acak per seed di seluruh rentang parameter → semua part watertight, tanpa kantong menembus dinding.
 
 ## Pengembangan
 

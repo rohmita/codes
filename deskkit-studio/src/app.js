@@ -6,7 +6,7 @@ import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { zipSync, strToU8 } from 'three/addons/libs/fflate.module.js';
-import { SCHEMA, DEFAULTS, PRESETS, OBJECT_TYPES } from './params.js';
+import { SCHEMA, DEFAULTS, PRESETS, PRESET_GROUPS, OBJECT_TYPES } from './params.js';
 import { buildObject, printedVolume, DENSITY } from './objects.js';
 
 const $ = s => document.querySelector(s);
@@ -299,8 +299,15 @@ function buildUI() {
     host.appendChild(det);
   }
   const ps = $('#presetSel');
-  ps.innerHTML = `<option value="">— custom —</option>` + Object.keys(PRESETS).map(k => `<option>${k}</option>`).join('');
-  ps.addEventListener('change', () => { if (PRESETS[ps.value]) { P = { ...PRESETS[ps.value], viewMode: P.viewMode }; syncUI(); rebuild(); fitCamera('iso'); } });
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  ps.innerHTML = `<option value="">— custom (${Object.keys(PRESETS).length} presets) —</option>` +
+    PRESET_GROUPS.map(([label, keys]) => `<optgroup label="${esc(label)} (${keys.length})">${keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}</optgroup>`).join('');
+  const loadPreset = k => { if (!PRESETS[k]) return; P = { ...PRESETS[k], viewMode: P.viewMode }; syncUI(); rebuild(); fitCamera('iso'); };
+  ps.addEventListener('change', () => loadPreset(ps.value));
+  const order = PRESET_GROUPS.flatMap(([, keys]) => keys);
+  const step = d => { let i = order.indexOf(ps.value); i = i < 0 ? (d > 0 ? 0 : order.length - 1) : (i + d + order.length) % order.length; loadPreset(order[i]); };
+  $('#presetPrev').onclick = () => step(-1);
+  $('#presetNext').onclick = () => step(1);
   $('#openRange').addEventListener('input', e => setParam('drawerOpen', +e.target.value, true));
 }
 function syncUI() {

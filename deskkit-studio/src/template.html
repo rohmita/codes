@@ -45,6 +45,10 @@ button, input, select { font: inherit; color: inherit; }
 .preset { display: flex; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--line); align-items: center; }
 .preset label { font: 500 10.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .preset select { flex: 1; min-width: 0; }
+.pbtn { flex: none; width: 28px; height: 30px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 7px; cursor: pointer; font: 600 15px/1 var(--mono); color: var(--muted); }
+.pbtn:hover { color: var(--text); border-color: var(--accent); }
+.pbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.preset .pbtn + .pbtn { margin-left: -4px; }
 .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 2px 0 18px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 details.group { border-bottom: 1px solid var(--line); }
 details.group > summary { list-style: none; cursor: pointer; padding: 13px 18px; display: flex; align-items: center; gap: 10px; font: 600 13px var(--font); user-select: none; }
@@ -141,7 +145,7 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=col
       <p>Parametric desk organizers, ready for your 3D printer.</p>
     </div>
     <div class="types" id="types" role="radiogroup" aria-label="Object type"></div>
-    <div class="preset"><label for="presetSel">Preset</label><select id="presetSel"></select></div>
+    <div class="preset"><label for="presetSel">Preset</label><select id="presetSel"></select><button class="pbtn" id="presetPrev" aria-label="Previous preset" title="Previous preset">‹</button><button class="pbtn" id="presetNext" aria-label="Next preset" title="Next preset">›</button></div>
     <div class="hud-m" id="hudMobile"></div>
     <div class="scroll" id="groups"></div>
     <div class="exportbar">

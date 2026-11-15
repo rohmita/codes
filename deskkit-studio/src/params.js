@@ -79,7 +79,7 @@ export const SCHEMA = [
     { key: 'cardHeightFrac', label: 'Holder height (× item height)', type: 'range', min: 0.25, max: 0.9, step: 0.01, def: 0.55 },
     { key: 'fingerDip', label: 'Front finger dip', type: 'range', min: 0, max: 20, step: 0.5, def: 9, unit: 'mm' },
     { key: 'cardTrough', label: 'Front pen trough', type: 'check', def: true },
-    { key: 'cardCorner', label: 'Corner radius', type: 'range', min: 0.5, max: 12, step: 0.5, def: 5, unit: 'mm' },
+    { key: 'cardCorner', label: 'Corner radius', type: 'range', min: 0.5, max: 12, step: 0.5, def: 4, unit: 'mm' },
   ] },
   { id: 'cable', title: 'Cable dock', open: true, show: is('cable-organizer'), params: [
     { key: 'cableChannels', label: 'Channels', type: 'range', min: 1, max: 10, step: 1, def: 5 },
@@ -128,17 +128,76 @@ export const PARAM_LIST = SCHEMA.flatMap(g => g.params);
 export const DEFAULTS = { objectType: 'pen-block', viewMode: 'assembled', ...Object.fromEntries(PARAM_LIST.map(p => [p.key, p.def])) };
 
 const P = o => ({ ...DEFAULTS, ...o });
+const tray = o => P({ objectType: 'tray', ...o });
+const cup = o => P({ objectType: 'pen-cup', ...o });
+const block = o => P({ objectType: 'pen-block', ...o });
+const stand = o => P({ objectType: 'phone-stand', ...o });
+const card = o => P({ objectType: 'card-holder', ...o });
+const cable = o => P({ objectType: 'cable-organizer', ...o });
+const drawer = o => P({ objectType: 'mini-drawer', ...o });
+
+// 47 presets, grouped by object type in the UI (order inside a type = order shown)
 export const PRESETS = {
-  'Stepped Pen Block': P({ objectType: 'pen-block' }),
-  'Bento Tray 3×3': P({ objectType: 'tray', trayLayout: 'trough-front', trayCols: 3, trayRows: 3, colorBody: '#e2a34f' }),
-  'Drawer Insert (low dividers)': P({ objectType: 'tray', trayWidth: 240, trayDepth: 160, trayHeight: 30, trayLayout: 'wide-left', trayCols: 3, trayRows: 2, trayDividerHeight: 0.7, trayScoop: 6, trayFeet: 'none', colorBody: '#8fa7c7' }),
-  'Twisted Hex Pen Cup': P({ objectType: 'pen-cup', cupShape: 'hexagon', twist: 60, taper: 1.1, colorBody: '#d36d5a' }),
-  'Fluted Round Cup': P({ objectType: 'pen-cup', cupShape: 'round', cupDiameter: 82, flutes: 28, fluteDepth: 1.6, twist: 0, taper: 1.04, cupDivider: 'cross', colorBody: '#c9b48a' }),
-  'Slanted Flower Cup': P({ objectType: 'pen-cup', cupShape: 'flower', flutes: 9, fluteDepth: 4, cupDiameter: 86, twist: 40, slant: 18, taper: 1.0, colorBody: '#b07cc6' }),
-  'Phone Stand': P({ objectType: 'phone-stand' }),
-  'Tablet Stand': P({ objectType: 'phone-stand', device: 'tablet + case', deviceThick: 14, standAngle: 62, standWidth: 150, standBaseDepth: 110, standBackHeight: 120, standLip: 13, standPlate: 6, cableNotch: 30, colorBody: '#5c7fa3' }),
-  'Business Card Holder': P({ objectType: 'card-holder', colorBody: '#3e4652' }),
-  'Sticky Note Station': P({ objectType: 'card-holder', cardType: 'sticky note 76', cardSlots: 1, cardStack: 22, cardTilt: 8, cardHeightFrac: 0.4, cardTrough: true, colorBody: '#f0c24b' }),
-  'Cable Dock ×5': P({ objectType: 'cable-organizer', colorBody: '#4a4f57' }),
-  'Mini Drawers ×3': P({ objectType: 'mini-drawer', colorBody: '#e7e2d6', colorAccent: '#5fae8f' }),
+  // ---------------------------------------------------------------- stepped pen blocks
+  'Stepped Pen Block': block({}),
+  'Twin Tier Pen Rack': block({ blockTiers: 2, blockWidth: 120, tierDepth: 30, blockBaseHeight: 50, blockStep: 28, frontTier: 'holes', holesPerTier: 5, holeDia: 14, holeDepth: 45, colorBody: '#e07a5f' }),
+  'Marker Station (staggered)': block({ blockTiers: 3, blockWidth: 190, tierDepth: 44, blockBaseHeight: 36, blockStep: 20, frontTier: 'holes', holesPerTier: 9, holeDia: 13, holeRows: 'staggered', holeDepth: 40, colorBody: '#3d5a80' }),
+  'Phone Dock Pen Block': block({ blockTiers: 2, blockWidth: 150, tierDepth: 40, blockBaseHeight: 55, blockStep: 30, frontTier: 'phone-slot', holesPerTier: 6, holeDia: 15, colorBody: '#2a9d8f' }),
+  'Brush & Pencil Stairs': block({ blockTiers: 4, blockWidth: 170, tierDepth: 26, blockBaseHeight: 30, blockStep: 18, frontTier: 'holes', holesPerTier: 10, holeDia: 10, holeDepth: 40, blockCorner: 5, colorBody: '#f2cc8f' }),
+  'Big Marker Block': block({ blockTiers: 1, blockWidth: 120, tierDepth: 62, blockBaseHeight: 75, frontTier: 'holes', holesPerTier: 4, holeDia: 22, holeRows: 'staggered', holeDepth: 60, blockCorner: 12, colorBody: '#264653' }),
+  'Desk Tidy XL': block({ blockTiers: 3, blockWidth: 220, tierDepth: 38, blockBaseHeight: 40, blockStep: 26, frontTier: 'tray', holesPerTier: 9, holeDia: 15, colorBody: '#b5838d' }),
+  // ---------------------------------------------------------------- trays
+  'Bento Tray 3×3': tray({ trayLayout: 'trough-front', trayCols: 3, trayRows: 3, colorBody: '#e2a34f' }),
+  'Drawer Insert (low dividers)': tray({ trayWidth: 240, trayDepth: 160, trayHeight: 30, trayLayout: 'wide-left', trayCols: 3, trayRows: 2, trayDividerHeight: 0.7, trayScoop: 6, trayFeet: 'none', colorBody: '#8fa7c7' }),
+  'Desk Valet Tray': tray({ trayWidth: 170, trayDepth: 115, trayHeight: 28, trayCorner: 16, trayLayout: 'wide-left', trayCols: 3, trayRows: 2, trayScoop: 12, trayPocketRadius: 8, colorBody: '#c58b5b' }),
+  'Jewelry & Ring Tray': tray({ trayWidth: 150, trayDepth: 100, trayHeight: 20, trayWall: 1.8, trayCorner: 8, trayLayout: 'grid', trayCols: 4, trayRows: 3, trayDivider: 1.4, trayPocketRadius: 4, trayScoop: 6, colorBody: '#e8b4b8', colorAccent: '#fff4ee' }),
+  'SD & USB Card Tray': tray({ trayWidth: 120, trayDepth: 80, trayHeight: 16, trayWall: 1.8, trayFloor: 1.6, trayCorner: 6, trayLayout: 'grid', trayCols: 6, trayRows: 3, trayDivider: 1.2, trayPocketRadius: 1.5, trayScoop: 3, trayFeet: 'none', colorBody: '#3e4652' }),
+  'Screw & Parts Sorter': tray({ trayWidth: 220, trayDepth: 150, trayHeight: 35, trayCorner: 6, trayFloor: 3.4, trayLayout: 'grid', trayCols: 5, trayRows: 4, trayDivider: 1.6, trayPocketRadius: 5, trayScoop: 14, trayFeet: 'magnets 6x2', colorBody: '#f0a030' }),
+  'Stationery Organizer': tray({ trayWidth: 240, trayDepth: 120, trayHeight: 45, trayLayout: 'trough-front', trayCols: 4, trayRows: 2, colorBody: '#7aa6c2' }),
+  'Key & Coin Catch-all': tray({ trayWidth: 120, trayDepth: 120, trayHeight: 25, trayCorner: 28, trayLayout: 'grid', trayCols: 1, trayRows: 1, trayScoop: 18, trayPocketRadius: 25, colorBody: '#2f6f5e', colorAccent: '#d9c9a3' }),
+  'Gridded Drawer Liner': tray({ trayWidth: 290, trayDepth: 210, trayHeight: 24, trayWall: 1.8, trayCorner: 6, trayLayout: 'wide-back', trayCols: 5, trayRows: 3, trayDividerHeight: 0.5, trayScoop: 4, trayFeet: 'none', colorBody: '#d8d2c4', colorAccent: '#a3b18a' }),
+  'Tea Bag Box (open)': tray({ trayWidth: 180, trayDepth: 90, trayHeight: 75, trayCorner: 8, trayLayout: 'grid', trayCols: 3, trayRows: 1, trayPocketRadius: 4, trayScoop: 4, colorBody: '#606c38', colorAccent: '#fefae0' }),
+  // ---------------------------------------------------------------- pen cups
+  'Twisted Hex Pen Cup': cup({ cupShape: 'hexagon', twist: 60, taper: 1.1, colorBody: '#d36d5a' }),
+  'Fluted Round Cup': cup({ cupShape: 'round', cupDiameter: 82, flutes: 28, fluteDepth: 1.6, twist: 0, taper: 1.04, cupDivider: 'cross', colorBody: '#c9b48a' }),
+  'Slanted Flower Cup': cup({ cupShape: 'flower', flutes: 9, fluteDepth: 4, cupDiameter: 86, twist: 40, slant: 18, taper: 1.0, colorBody: '#b07cc6' }),
+  'Minimal Square Cup': cup({ cupShape: 'square', cupDiameter: 75, cupHeight: 100, cupCorner: 12, twist: 0, taper: 1.0, colorBody: '#ececec', colorAccent: '#5fae8f' }),
+  'Spiral Octagon Cup': cup({ cupShape: 'octagon', cupDiameter: 80, cupHeight: 120, cupCorner: 4, twist: 120, taper: 1.15, heightSegs: 120, colorBody: '#2e86ab' }),
+  'Wide Brush Holder': cup({ cupShape: 'round', cupDiameter: 105, cupHeight: 120, flutes: 36, fluteDepth: 1.0, twist: 0, taper: 1.02, cupDivider: 'cross', colorBody: '#8d6e63' }),
+  'Tapered Cone Cup': cup({ cupShape: 'round', cupDiameter: 66, cupHeight: 110, flutes: 0, twist: 0, taper: 1.3, colorBody: '#ff8a5c' }),
+  'Petal Cup (small)': cup({ cupShape: 'flower', flutes: 6, fluteDepth: 4.5, cupDiameter: 62, cupHeight: 78, twist: 60, taper: 1.06, colorBody: '#f4a6c1' }),
+  'Three-Way Tool Cup': cup({ cupShape: 'hexagon', cupDiameter: 96, cupHeight: 115, twist: 0, taper: 1.0, slant: 15, cupDivider: 'three-way', colorBody: '#596475' }),
+  'Ribbed Toothbrush Cup': cup({ cupShape: 'round', cupDiameter: 72, cupHeight: 105, flutes: 40, fluteDepth: 0.8, twist: 25, taper: 0.92, cupDivider: 'half', colorBody: '#9ad1d4' }),
+  // ---------------------------------------------------------------- stands
+  'Phone Stand': stand({}),
+  'Tablet Stand': stand({ device: 'tablet + case', deviceThick: 14, standAngle: 62, standWidth: 150, standBaseDepth: 110, standBackHeight: 120, standLip: 13, standPlate: 6, cableNotch: 30, colorBody: '#5c7fa3' }),
+  'Low-Angle Reading Stand': stand({ device: 'tablet', deviceThick: 9, standAngle: 55, standWidth: 180, standBaseDepth: 130, standBackHeight: 110, standLip: 10, standPlate: 6, cableNotch: 0, colorBody: '#a98467' }),
+  'Nightstand Phone Dock': stand({ device: 'phone', deviceThick: 10, standAngle: 72, standWidth: 70, standBaseDepth: 75, standBackHeight: 80, standLip: 8, cableNotch: 18, brace: 'solid', colorBody: '#22223b' }),
+  'Dual Phone Stand': stand({ device: 'phone + case', deviceThick: 13, standAngle: 66, standWidth: 190, standBaseDepth: 85, standBackHeight: 95, standLip: 12, cableNotch: 0, colorBody: '#ef476f' }),
+  'E-reader Stand': stand({ device: 'phone', deviceThick: 9.5, standAngle: 63, standWidth: 110, standBaseDepth: 90, standBackHeight: 105, standLip: 9, cableNotch: 0, colorBody: '#6b9080' }),
+  'Video-Call Stand (steep)': stand({ device: 'phone + case', deviceThick: 12.5, standAngle: 78, standWidth: 75, standBaseDepth: 95, standBackHeight: 110, standLip: 14, cableNotch: 22, colorBody: '#118ab2' }),
+  // ---------------------------------------------------------------- card / note holders
+  'Business Card Holder': card({ colorBody: '#3e4652' }),
+  'Sticky Note Station': card({ cardType: 'sticky note 76', cardSlots: 1, cardStack: 22, cardTilt: 8, cardHeightFrac: 0.4, cardTrough: true, colorBody: '#f0c24b' }),
+  'Index Card File': card({ cardType: 'index card', cardSlots: 3, cardStack: 14, cardTilt: 6, cardHeightFrac: 0.6, cardTrough: false, fingerDip: 12, colorBody: '#7f5539' }),
+  'Credit Card Rack': card({ cardType: 'credit card', cardSlots: 4, cardStack: 5, cardTilt: 15, cardHeightFrac: 0.5, cardTrough: false, fingerDip: 8, colorBody: '#1d3557' }),
+  'Photo / Postcard Display': card({ cardType: 'custom', cardW: 150, cardH: 100, cardSlots: 1, cardStack: 4, cardTilt: 18, cardHeightFrac: 0.25, cardTrough: false, fingerDip: 0, colorBody: '#fefae0', colorAccent: '#bc6c25' }),
+  'Coaster Holder': card({ cardType: 'custom', cardW: 100, cardH: 100, cardSlots: 1, cardStack: 30, cardTilt: 0, cardHeightFrac: 0.45, cardTrough: false, fingerDip: 16, cardCorner: 4, colorBody: '#8a5a44' }),
+  'Recipe Card Stand': card({ cardType: 'custom', cardW: 127, cardH: 102, cardSlots: 2, cardStack: 10, cardTilt: 12, cardHeightFrac: 0.4, cardTrough: true, colorBody: '#e76f51' }),
+  // ---------------------------------------------------------------- cable docks
+  'Cable Dock ×5': cable({ colorBody: '#4a4f57' }),
+  'Charging Cable Trio': cable({ cableChannels: 3, cableDia: 4, cableNeck: 0.75, cableLength: 30, cablePitch: 7, cableBase: 12, cableRound: 5, colorBody: '#f4f1de' }),
+  'Thick Power Cable Holder': cable({ cableChannels: 3, cableDia: 10, cableNeck: 0.7, cableLength: 40, cablePitch: 8, cableBase: 12, cableRound: 6, colorBody: '#3a3a3a' }),
+  'Earphone Cable Clip': cable({ cableChannels: 2, cableDia: 2.5, cableNeck: 0.7, cableLength: 16, cablePitch: 4, cableBase: 5, cableRound: 3, colorBody: '#ffb703' }),
+  'Desk Cable Bar ×8': cable({ cableChannels: 8, cableDia: 5, cableNeck: 0.72, cableLength: 50, cablePitch: 5, cableBase: 10, cableRound: 4, colorBody: '#5fae8f' }),
+  'HDMI & USB Mix ×4': cable({ cableChannels: 4, cableDia: 7.5, cableNeck: 0.68, cableLength: 36, cablePitch: 6, cableBase: 10, colorBody: '#457b9d' }),
+  // ---------------------------------------------------------------- mini drawers
+  'Mini Drawers ×3': drawer({ colorBody: '#e7e2d6', colorAccent: '#5fae8f' }),
+  'Single Stationery Drawer': drawer({ drawerCount: 1, drawerW: 180, drawerD: 150, drawerH: 45, caseWall: 2.8, caseCorner: 6, colorBody: '#2b2d42', colorAccent: '#edf2f4' }),
+  'Tall Drawer Tower ×5': drawer({ drawerCount: 5, drawerW: 80, drawerD: 110, drawerH: 25, drawerHandle: 'dip', caseCorner: 4, colorBody: '#cdb4db', colorAccent: '#ffffff' }),
+  'SD Card Drawers ×4': drawer({ drawerCount: 4, drawerW: 60, drawerD: 80, drawerH: 18, drawerWall: 1.4, caseWall: 2, caseCorner: 3, colorBody: '#264653', colorAccent: '#e9c46a' }),
+  'Wide Drawer Pair': drawer({ drawerCount: 2, drawerW: 200, drawerD: 160, drawerH: 40, caseWall: 3, caseCorner: 8, colorBody: '#f1faee', colorAccent: '#e63946' }),
+  'Craft Supply Drawers ×3': drawer({ drawerCount: 3, drawerW: 120, drawerD: 130, drawerH: 55, drawerWall: 2, caseWall: 2.8, colorBody: '#ffafcc', colorAccent: '#bde0fe' }),
 };
+
+export const PRESET_GROUPS = OBJECT_TYPES.map(([type, label]) => [label, Object.keys(PRESETS).filter(k => PRESETS[k].objectType === type)]);
