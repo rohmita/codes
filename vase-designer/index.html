@@ -21,7 +21,23 @@
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --scene-bg: #1b1e22;
+  --grid-a: #666a70;
+  --grid-b: #3a3e44;
+  --cut: #e0603a;         /* section cut-face colour */
   color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f1ec; --panel: #fbfaf7; --panel-2: #efece6; --line: #dcd7ce; --fg: #23211d; --muted: #6f6a61;
+    --accent: #b97a2a; --accent-ink: #fffaf2; --scene-bg: #e9e6e0; --grid-a: #9a958c; --grid-b: #cfcac1; --cut: #d0502c;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f1ec; --panel: #fbfaf7; --panel-2: #efece6; --line: #dcd7ce; --fg: #23211d; --muted: #6f6a61;
+  --accent: #b97a2a; --accent-ink: #fffaf2; --scene-bg: #e9e6e0; --grid-a: #9a958c; --grid-b: #cfcac1; --cut: #d0502c;
+  color-scheme: light;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -108,13 +124,37 @@ button.export:hover { filter: brightness(1.08); }
   pointer-events: none;
 }
 .toast.show { opacity: 1; }
+button.export-all { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 600; }
+button[disabled] { opacity: .55; cursor: progress; }
+.export-group { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* viewer tools, floating over the 3D view */
+.viewtools {
+  position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; z-index: 3;
+}
+.vt-row { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end;
+  background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 4px; backdrop-filter: blur(6px); }
+.vt { font: 500 12px var(--font-body); padding: 5px 9px; border-radius: 7px; background: transparent; border: 1px solid transparent; }
+.vt:hover { border-color: var(--line); }
+.vt[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.section-box {
+  display: grid; gap: 8px; width: 230px; font-size: 12.5px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 10px; backdrop-filter: blur(6px);
+}
+.section-box .line { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.section-box select { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 5px; font: 12px var(--font-body); }
+.section-box output { font: 11.5px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint { position: absolute; left: 14px; top: 12px; font: 11px var(--font-mono); color: var(--muted); pointer-events: none; }
+@media (max-width: 820px) { .hint { display: none; } .viewtools { top: 8px; right: 8px; } .vt { padding: 4px 7px; font-size: 11.5px; } }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 13px var(--font-mono); }
 
 @media (max-width: 820px) {
-  body { grid-template-columns: 1fr; grid-template-rows: 58vh 1fr; overflow: auto; height: auto; min-height: 100%; }
-  main { grid-row: 1; height: 58vh; position: sticky; top: 0; z-index: 2; }
+  body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow: auto; height: auto; min-height: 100%; }
+  main { grid-row: 1; height: 72vh; position: sticky; top: 0; z-index: 2; }
   aside { grid-row: 2; border-right: 0; padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow: visible; }
-  .stats { font-size: 10.5px; }
+  .stats { display: none; }
+  .section-box { width: 200px; }
+  .toolbar { gap: 6px; } .toolbar button { padding: 6px 9px; font-size: 12.5px; }
 }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
@@ -140,13 +180,41 @@ button.export:hover { filter: brightness(1.08); }
     <button id="btnSave" type="button">Save .json</button>
     <button id="btnLoad" type="button">Load .json</button>
     <input id="fileLoad" type="file" accept=".json,application/json" hidden>
+    <button id="btnTheme" type="button" aria-label="Switch dark / light mode">◐ Light</button>
     <span class="spacer"></span>
-    <button class="export" id="btnSTL" type="button">Export STL</button>
-    <button class="export" id="btnGLB" type="button">Export GLB</button>
-    <button class="export" id="btnOBJ" type="button">Export OBJ</button>
+    <div class="export-group" role="group" aria-label="Export">
+      <button class="export" id="btnSTL" type="button">STL</button>
+      <button class="export" id="btnOBJ" type="button">OBJ</button>
+      <button class="export" id="btnGLB" type="button">GLB</button>
+      <button class="export" id="btnPNG" type="button">PNG</button>
+      <button class="export-all" id="btnALL" type="button">Export all (.zip)</button>
+    </div>
   </div>
   <div id="viewport">
     <div class="loading" id="loading">Loading 3D engine…</div>
+    <div class="hint">drag: rotate · right-drag: pan · scroll: zoom</div>
+    <div class="viewtools">
+      <div class="vt-row" role="toolbar" aria-label="Viewer">
+        <button class="vt" id="vtRotate" type="button" aria-pressed="true">Auto-rotate</button>
+        <button class="vt" id="vtWire" type="button" aria-pressed="false">Wireframe</button>
+        <button class="vt" id="vtSection" type="button" aria-pressed="false">Section cut</button>
+        <button class="vt" id="vtGrid" type="button" aria-pressed="true">Grid</button>
+        <button class="vt" id="vtShadow" type="button" aria-pressed="true">Shadow</button>
+      </div>
+      <div class="vt-row" role="toolbar" aria-label="Camera">
+        <button class="vt" id="vtFront" type="button">Front</button>
+        <button class="vt" id="vtSide" type="button">Side</button>
+        <button class="vt" id="vtTop" type="button">Top</button>
+        <button class="vt" id="vtReset" type="button">Reset view</button>
+      </div>
+      <div class="section-box" id="sectionBox" hidden>
+        <div class="line"><label for="secAxis">Cut plane</label>
+          <select id="secAxis"><option value="x">Vertical (X)</option><option value="z">Vertical (Z)</option><option value="y">Horizontal (Y)</option></select></div>
+        <div class="line"><label for="secPos">Position</label><output id="secOut">50%</output></div>
+        <input type="range" id="secPos" min="0" max="100" step="1" value="50">
+        <label class="check"><input type="checkbox" id="secFlip"> Flip side</label>
+      </div>
+    </div>
     <dl class="stats" id="stats"></dl>
     <div class="toast" id="toast"></div>
   </div>
@@ -159,6 +227,7 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { zipSync, strToU8 } from 'three/addons/libs/fflate.module.js';
 
 /* ------------------------------------------------------------------ *
  *  Parameter schema (70+ controls)
@@ -259,6 +328,7 @@ const SCHEMA = [
     C('wireframe', 'Wireframe', false),
   ]),
   G('Scene', 'view only', [
+    C('customBg', 'Custom background (instead of theme)', false),
     K('bgColor', 'Background', '#1b1e22'),
     R('exposure', 'Exposure', 0.3, 2, 0.01, 1),
     C('autoRotate', 'Auto-rotate', true),
@@ -425,25 +495,29 @@ function surface(phi, t, out) {
   return out;
 }
 
-function inHole(phi, t) {
+/* Signed distance (mm, negative = inside a hole) of point (phi, t) to the nearest hole outline. */
+function holeSD(phi, t) {
   const a = P.holeStart, b = P.holeEnd;
-  if (b - a < 0.01 || t < a || t > b) return false;
-  const rowF = (t - a) / (b - a) * P.holeRows;
+  if (b - a < 0.01) return 1e9;
+  const tc = Math.min(Math.max(t, a), b);
+  const rowF = (tc - a) / (b - a) * P.holeRows;
   const row = Math.min(P.holeRows - 1, Math.floor(rowF));
-  const fy = rowF - row - 0.5;
-  let colF = phi / TAU * P.holeCols + (P.holeStagger && row % 2 ? 0.5 : 0) + P.holeShift * row;
-  const fx = colF - Math.floor(colF) - 0.5;
-  const rad = profileRadius(t) * (P.stretchX + P.stretchZ) / 2;
-  const cw = TAU * rad / P.holeCols, ch = (b - a) * P.height / P.holeRows;
-  const px = fx * cw, py = fy * ch;
+  const ch = (b - a) * P.height / P.holeRows;
+  const py = ((t - a) / (b - a) * P.holeRows - row - 0.5) * ch;
+  const colF = phi / TAU * P.holeCols + (P.holeStagger && row % 2 ? 0.5 : 0) + P.holeShift * row;
+  const rad = profileRadius(Math.min(Math.max(t, 0), 1)) * (P.stretchX + P.stretchZ) / 2;
+  const cw = TAU * rad / P.holeCols;
+  const px = (colF - Math.floor(colF) - 0.5) * cw;
   const m = Math.min(cw, ch) * P.holeSize / 2;
+  const ax = Math.abs(px), ay = Math.abs(py);
   switch (P.holeShape) {
-    case 'square': return Math.abs(px) < m && Math.abs(py) < m;
-    case 'diamond': return Math.abs(px) + Math.abs(py) < m * 1.15;
-    case 'slot': return Math.abs(px) < m * 0.45 && Math.abs(py) < ch * P.holeSize / 2;
-    default: return px * px + py * py < m * m;
+    case 'square': return Math.max(ax, ay) - m;
+    case 'diamond': return (ax + ay - m * 1.15) / Math.SQRT2;
+    case 'slot': return Math.max(ax - m * 0.45, ay - ch * P.holeSize / 2);
+    default: return Math.hypot(px, py) - m;
   }
 }
+const inHole = (phi, t) => t >= P.holeStart && t <= P.holeEnd && holeSD(phi, t) < 0;
 
 /* ------------------------------------------------------------------ *
  *  Mesh builder: outer wall, inner wall, rim, base, hole side-walls.
@@ -477,12 +551,43 @@ function buildGeometry() {
   const centers = [];
   let innerAreaRings = [];
 
+  // hole mask
+  const hole = new Uint8Array(RS * HS);
+  let anyHole = false;
+  if (P.holesOn) {
+    for (let j = 2; j < HS - 2; j++) for (let i = 0; i < RS; i++) {
+      if (inHole((i + 0.5) / RS * TAU, (j + 0.5) / HS)) { hole[j * RS + i] = 1; anyHole = true; }
+    }
+  }
+  // Snap grid vertices on a hole edge onto the true outline (smooth holes instead of stair-steps).
+  const dPhi = new Float32Array(RS * (HS + 1)), dT = new Float32Array(RS * (HS + 1));
+  if (anyHole) {
+    const cp = TAU / RS, ct = 1 / HS, e = 1e-4;
+    for (let j = 2; j <= HS - 2; j++) for (let i = 0; i < RS; i++) {
+      const im = (i - 1 + RS) % RS;
+      const n = hole[(j-1)*RS+im] + hole[(j-1)*RS+i] + hole[j*RS+im] + hole[j*RS+i];
+      if (n === 0 || n === 4) continue;
+      let ph = i * cp, t = j * ct;
+      for (let it = 0; it < 3; it++) {
+        const d = holeSD(ph, t);
+        const gp = (holeSD(ph + e, t) - holeSD(ph - e, t)) / (2 * e);
+        const gt = (holeSD(ph, t + e) - holeSD(ph, t - e)) / (2 * e);
+        const g2 = gp * gp + gt * gt;
+        if (g2 < 1e-9) break;
+        ph -= d * gp / g2; t -= d * gt / g2;
+        ph = Math.min(Math.max(ph, (i - 0.49) * cp), (i + 0.49) * cp);
+        t = Math.min(Math.max(t, (j - 0.49) * ct), (j + 0.49) * ct);
+      }
+      dPhi[j*RS+i] = ph - i * cp; dT[j*RS+i] = t - j * ct;
+    }
+  }
+
   for (let j = 0; j <= HS; j++) {
-    const t = j / HS;
-    const tin = vb + (1 - vb) * t;
     const ring = [];
     for (let i = 0; i < RS; i++) {
-      const phi = i / RS * TAU;
+      const t = j / HS + dT[j * RS + i];
+      const tin = vb + (1 - vb) * t;
+      const phi = i / RS * TAU + dPhi[j * RS + i];
       surface(phi, t, tmp);
       O[j * RS + i] = addV(tmp[0], tmp[1], tmp[2], colorAt(phi, t, false));
       if (i === 0) centers[j] = [tmp[3], tmp[4]];
@@ -497,17 +602,9 @@ function buildGeometry() {
     // inner cross-section area (shoelace) for capacity estimate
     let A = 0;
     for (let i = 0; i < RS; i++) { const k = (i + 1) % RS; A += ring[i*2] * ring[k*2+1] - ring[k*2] * ring[i*2+1]; }
-    innerAreaRings.push([Math.abs(A) / 2, tin * P.height]);
+    innerAreaRings.push([Math.abs(A) / 2, (vb + (1 - vb) * j / HS) * P.height]);
   }
 
-  // hole mask
-  const hole = new Uint8Array(RS * HS);
-  let anyHole = false;
-  if (P.holesOn) {
-    for (let j = 2; j < HS - 2; j++) for (let i = 0; i < RS; i++) {
-      if (inHole((i + 0.5) / RS * TAU, (j + 0.5) / HS)) { hole[j * RS + i] = 1; anyHole = true; }
-    }
-  }
   const isHole = (i, j) => j >= 0 && j < HS && hole[j * RS + ((i % RS) + RS) % RS] === 1;
 
   const v3 = (i) => [pos[i*3], pos[i*3+1], pos[i*3+2]];
@@ -537,7 +634,9 @@ function buildGeometry() {
     idx.push(n00, n10, n11, n00, n11, n01);              // inner, faces the cavity
   }
 
-  // hole side walls
+  // hole side walls (side-wall vertices are shared between neighbouring side faces so shading stays smooth)
+  const sideMap = new Map();
+  const sideV = i => { let k = sideMap.get(i); if (k === undefined) { k = dup(i); sideMap.set(i, k); } return k; };
   if (anyHole) {
     for (let j = 0; j < HS; j++) for (let i = 0; i < RS; i++) {
       if (!hole[j * RS + i]) continue;
@@ -546,7 +645,7 @@ function buildGeometry() {
       const ctr = [0, 0, 0];
       corners.forEach(k => { ctr[0] += pos[k*3] / 8; ctr[1] += pos[k*3+1] / 8; ctr[2] += pos[k*3+2] / 8; });
       const edge = (oa, ob, ia, ib) => {
-        const a = dup(oa), b = dup(ob), c = dup(ib), d = dup(ia);
+        const a = sideV(oa), b = sideV(ob), c = sideV(ib), d = sideV(ia);
         const m = [(pos[a*3]+pos[b*3]+pos[c*3]+pos[d*3])/4, (pos[a*3+1]+pos[b*3+1]+pos[c*3+1]+pos[d*3+1])/4, (pos[a*3+2]+pos[b*3+2]+pos[c*3+2]+pos[d*3+2])/4];
         quadOriented(a, b, c, d, [ctr[0]-m[0], ctr[1]-m[1], ctr[2]-m[2]]);
       };
@@ -609,11 +708,12 @@ function buildGeometry() {
  *  Three.js scene
  * ------------------------------------------------------------------ */
 const viewport = document.getElementById('viewport');
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
 viewport.appendChild(renderer.domElement);
 document.getElementById('loading').remove();
 
@@ -622,10 +722,8 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
-camera.position.set(330, 240, 380);
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
-orbit.target.set(0, 90, 0);
 orbit.autoRotateSpeed = 1.2;
 
 const key = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -639,16 +737,46 @@ rimLight.position.set(-300, 150, -200);
 scene.add(rimLight);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.35));
 
-const floor = new THREE.Mesh(new THREE.CircleGeometry(900, 64), new THREE.ShadowMaterial({ opacity: 0.35 }));
+const floor = new THREE.Mesh(new THREE.CircleGeometry(900, 64), new THREE.ShadowMaterial({ opacity: 0.3 }));
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-const grid = new THREE.GridHelper(600, 30, 0x666a70, 0x3a3e44);
-grid.position.y = 0.05; scene.add(grid);
+let grid = null;
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function makeGrid() {
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+  grid = new THREE.GridHelper(600, 30, new THREE.Color(cssVar('--grid-a')), new THREE.Color(cssVar('--grid-b')));
+  grid.position.y = 0.05; grid.visible = P.showGrid; scene.add(grid);
+}
 
+// Section cut-away: one clipping plane shared by the vase and its "cut face" twin.
+// The twin renders only back faces in a flat colour, so wherever the plane opens the wall
+// you see a solid cross-section instead of a hollow shell.
+const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const section = { on: false, axis: 'x', pos: 50, flip: false };
 const material = new THREE.MeshPhysicalMaterial({ vertexColors: true, side: THREE.FrontSide });
+const cutMaterial = new THREE.MeshBasicMaterial({ color: 0xe0603a, side: THREE.BackSide });
 const vase = new THREE.Mesh(new THREE.BufferGeometry(), material);
 vase.castShadow = true; vase.receiveShadow = true;
-scene.add(vase);
+const cutFace = new THREE.Mesh(vase.geometry, cutMaterial);
+cutFace.visible = false;
+scene.add(vase, cutFace);
 
+function updateSection() {
+  const bb = vase.geometry.boundingBox;
+  const planes = section.on ? [clipPlane] : [];
+  material.clippingPlanes = planes; cutMaterial.clippingPlanes = planes;
+  cutFace.visible = section.on && !P.wireframe;
+  if (!bb) return;
+  const ax = section.axis, f = section.pos / 100;
+  const min = bb.min[ax], max = bb.max[ax];
+  const v = min + (max - min) * f;
+  const s = section.flip ? -1 : 1;
+  clipPlane.normal.set(ax === 'x' ? -s : 0, ax === 'y' ? -s : 0, ax === 'z' ? -s : 0);
+  clipPlane.constant = s * v;
+  document.getElementById('secOut').textContent = `${section.pos}% · ${v.toFixed(1)} mm`;
+  material.needsUpdate = true; cutMaterial.needsUpdate = true;
+}
+
+let shadowsOn = true;
 function updateMaterial() {
   material.metalness = P.metalness;
   material.roughness = P.roughness;
@@ -657,10 +785,29 @@ function updateMaterial() {
   material.flatShading = P.flatShading;
   material.wireframe = P.wireframe;
   material.needsUpdate = true;
-  scene.background = new THREE.Color(P.bgColor);
+  scene.background = new THREE.Color(P.customBg ? P.bgColor : cssVar('--scene-bg'));
+  cutMaterial.color.set(cssVar('--cut'));
   renderer.toneMappingExposure = P.exposure;
   orbit.autoRotate = P.autoRotate;
-  grid.visible = P.showGrid;
+  if (grid) grid.visible = P.showGrid;
+  floor.visible = shadowsOn;
+  vase.castShadow = shadowsOn;
+  cutFace.visible = section.on && !P.wireframe;
+  syncViewTools();
+}
+
+/* camera presets */
+function frame(dir) {
+  const bb = vase.geometry.boundingBox;
+  const size = bb ? bb.getSize(new THREE.Vector3()) : new THREE.Vector3(150, 180, 150);
+  const center = bb ? bb.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 90, 0);
+  const radius = Math.max(size.x, size.y, size.z) * 0.62 + 20;
+  const dist = radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * (camera.aspect < 1 ? 1.35 : 1);
+  const d = { iso: [0.62, 0.42, 0.66], front: [0, 0.02, 1], side: [1, 0.02, 0], top: [0.0001, 1, 0.0001] }[dir];
+  const v = new THREE.Vector3(...d).normalize().multiplyScalar(dist);
+  orbit.target.copy(center);
+  camera.position.copy(center).add(v);
+  orbit.update();
 }
 
 const statsEl = document.getElementById('stats');
@@ -668,6 +815,8 @@ function rebuild() {
   const geo = buildGeometry();
   vase.geometry.dispose();
   vase.geometry = geo;
+  cutFace.geometry = geo;
+  updateSection();
   const bb = geo.boundingBox, u = geo.userData;
   const w = bb.max.x - bb.min.x, d = bb.max.z - bb.min.z, h = bb.max.y - bb.min.y;
   const cm3 = u.volume / 1000;
@@ -679,18 +828,17 @@ function rebuild() {
   if (!P.closedBottom) statsEl.lastElementChild.textContent = 'open bottom';
 }
 
-const MATERIAL_KEYS = new Set(['metalness', 'roughness', 'clearcoat', 'flatShading', 'wireframe', 'bgColor', 'exposure', 'autoRotate', 'showGrid']);
+const MATERIAL_KEYS = new Set(['metalness', 'roughness', 'clearcoat', 'flatShading', 'wireframe', 'bgColor', 'exposure', 'autoRotate', 'showGrid', 'customBg']);
 let pending = false;
 function changed(key) {
   if (MATERIAL_KEYS.has(key)) { updateMaterial(); return; }
-  if (key === 'height') orbit.target.y = P.height / 2;
   if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; rebuild(); }); }
 }
 
 function applyParams(obj, label) {
   for (const k in DEFAULTS) if (k in obj) P[k] = obj[k];
   syncUI(); updateMaterial(); rebuild();
-  orbit.target.y = P.height / 2;
+  frame('iso');
   if (label) toast(label);
 }
 
@@ -729,25 +877,59 @@ function exportMesh(transform) {
   mesh.name = 'Vase';
   return mesh;
 }
+// Exports always use the full, uncut model (the section cut is a view-only tool).
+function makeSTL() {          // millimetres, Z-up (what slicers expect)
+  const dv = new STLExporter().parse(exportMesh(g => g.rotateX(Math.PI / 2)), { binary: true });
+  return new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+}
+function makeOBJ() {          // millimetres, Y-up, with vertex colours
+  return new OBJExporter().parse(exportMesh());
+}
+function makeGLB() {          // glTF uses metres
+  return new GLTFExporter().parseAsync(exportMesh(g => g.scale(0.001, 0.001, 0.001)), { binary: true })
+    .then(buf => new Uint8Array(buf));
+}
+// Transparent PNG of the current view: no background, grid, floor shadow or section cut; at least 2048 px wide.
+function makePNG() {
+  const prev = { bg: scene.background, grid: grid.visible, floor: floor.visible, pr: renderer.getPixelRatio(), planes: material.clippingPlanes, cut: cutFace.visible };
+  scene.background = null; grid.visible = false; floor.visible = false;
+  material.clippingPlanes = []; cutFace.visible = false; material.needsUpdate = true;
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  renderer.setPixelRatio(Math.max(2, Math.ceil(2048 / w)));
+  renderer.setSize(w, h, false);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, camera);
+  return new Promise(resolve => renderer.domElement.toBlob(blob => {
+    scene.background = prev.bg; grid.visible = prev.grid; floor.visible = prev.floor;
+    material.clippingPlanes = prev.planes; cutFace.visible = prev.cut; material.needsUpdate = true;
+    renderer.setPixelRatio(prev.pr); resize();
+    blob.arrayBuffer().then(b => resolve(new Uint8Array(b)));
+  }, 'image/png'));
+}
 
-document.getElementById('btnSTL').addEventListener('click', () => {
-  // STL in millimetres, Z-up (what slicers expect)
-  const mesh = exportMesh(g => g.rotateX(Math.PI / 2));
-  const data = new STLExporter().parse(mesh, { binary: true });
-  download(new Blob([data], { type: 'model/stl' }), stamp() + '.stl');
-});
-document.getElementById('btnOBJ').addEventListener('click', () => {
-  // OBJ in millimetres, Y-up, with vertex colours
-  const mesh = exportMesh();
-  download(new OBJExporter().parse(mesh), stamp() + '.obj', 'text/plain');
-});
-document.getElementById('btnGLB').addEventListener('click', () => {
-  // glTF uses metres
-  const mesh = exportMesh(g => g.scale(0.001, 0.001, 0.001));
-  new GLTFExporter().parse(mesh,
-    buf => download(new Blob([buf], { type: 'model/gltf-binary' }), stamp() + '.glb'),
-    err => { console.error(err); toast('GLB export failed'); },
-    { binary: true });
+async function busy(btn, fn) {
+  btn.disabled = true;
+  try { await fn(); } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e)); }
+  finally { btn.disabled = false; }
+}
+const bind = (id, fn) => { const b = document.getElementById(id); b.addEventListener('click', () => busy(b, fn)); };
+bind('btnSTL', async () => download(new Blob([makeSTL()], { type: 'model/stl' }), stamp() + '.stl'));
+bind('btnOBJ', async () => download(makeOBJ(), stamp() + '.obj', 'text/plain'));
+bind('btnGLB', async () => download(new Blob([await makeGLB()], { type: 'model/gltf-binary' }), stamp() + '.glb'));
+bind('btnPNG', async () => download(new Blob([await makePNG()], { type: 'image/png' }), stamp() + '.png'));
+bind('btnALL', async () => {
+  toast('Packing STL, OBJ, GLB, PNG and settings…');
+  const base = stamp();
+  const files = {
+    [base + '.stl']: makeSTL(),
+    [base + '.obj']: strToU8(makeOBJ()),
+    [base + '.glb']: await makeGLB(),
+    [base + '.png']: [await makePNG(), { level: 0 }],
+    [base + '.json']: strToU8(JSON.stringify(P, null, 2)),
+    'README.txt': strToU8('Vase Studio export\n\n.stl  millimetres, Z-up, for 3D printing\n.obj  millimetres, Y-up, with vertex colours\n.glb  metres (glTF standard), with vertex colours\n.png  transparent render of the current view\n.json settings: load it back with "Load .json"\n'),
+  };
+  const zip = zipSync(files, { level: 6 });
+  download(new Blob([zip], { type: 'application/zip' }), base + '.zip');
 });
 document.getElementById('btnSave').addEventListener('click', () => download(JSON.stringify(P, null, 2), stamp() + '.json', 'application/json'));
 const fileLoad = document.getElementById('fileLoad');
@@ -784,10 +966,56 @@ document.getElementById('btnRandom').addEventListener('click', () => {
   applyParams({ ...P, ...o }, 'New random vase');
 });
 
-updateMaterial();
+/* ------------------------------------------------------------------ *
+ *  Viewer tools + dark/light theme
+ * ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+function syncViewTools() {
+  $('vtRotate').setAttribute('aria-pressed', P.autoRotate);
+  $('vtWire').setAttribute('aria-pressed', P.wireframe);
+  $('vtGrid').setAttribute('aria-pressed', P.showGrid);
+  $('vtShadow').setAttribute('aria-pressed', shadowsOn);
+  $('vtSection').setAttribute('aria-pressed', section.on);
+  $('sectionBox').hidden = !section.on;
+}
+const toggleParam = k => { P[k] = !P[k]; inputs[k].set(P[k]); updateMaterial(); };
+$('vtRotate').addEventListener('click', () => toggleParam('autoRotate'));
+$('vtWire').addEventListener('click', () => toggleParam('wireframe'));
+$('vtGrid').addEventListener('click', () => toggleParam('showGrid'));
+$('vtShadow').addEventListener('click', () => { shadowsOn = !shadowsOn; updateMaterial(); });
+$('vtSection').addEventListener('click', () => { section.on = !section.on; updateSection(); updateMaterial(); });
+$('secAxis').addEventListener('change', e => { section.axis = e.target.value; updateSection(); });
+$('secPos').addEventListener('input', e => { section.pos = +e.target.value; updateSection(); });
+$('secFlip').addEventListener('change', e => { section.flip = e.target.checked; updateSection(); });
+const stopSpin = () => { if (P.autoRotate) toggleParam('autoRotate'); };
+$('vtFront').addEventListener('click', () => { stopSpin(); frame('front'); });
+$('vtSide').addEventListener('click', () => { stopSpin(); frame('side'); });
+$('vtTop').addEventListener('click', () => { stopSpin(); frame('top'); });
+$('vtReset').addEventListener('click', () => frame('iso'));
+
+const mql = window.matchMedia('(prefers-color-scheme: light)');
+const effectiveTheme = () => document.documentElement.dataset.theme || (mql.matches ? 'light' : 'dark');
+function applyTheme(t) {
+  if (t) document.documentElement.dataset.theme = t;
+  const cur = effectiveTheme();
+  $('btnTheme').textContent = cur === 'dark' ? '☀ Light mode' : '☾ Dark mode';
+  makeGrid(); updateMaterial();
+}
+$('btnTheme').addEventListener('click', () => {
+  const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('vase-theme', next); } catch {}
+  applyTheme(next);
+});
+mql.addEventListener('change', () => applyTheme());
+let savedTheme = null;
+try { savedTheme = localStorage.getItem('vase-theme'); } catch {}
+
+applyTheme(savedTheme);
 rebuild();
 resize();
+frame('iso');
 loop();
 </script>
+
 </body>
 </html>
