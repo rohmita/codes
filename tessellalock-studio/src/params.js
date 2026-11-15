@@ -1,0 +1,92 @@
+// SCHEMA (PRD §5.1) — every UI control is generated from this structure.
+export const SCHEMA = [
+  { id: 'geometry', title: 'Base Shape & Tessellation', open: true, params: [
+    { key: 'baseShape', label: 'Base footprint shape', type: 'select', options: ['box', 'hexagon', 'octagon', 'triangle', 'circle-collar', 'multigon'], def: 'hexagon' },
+    { key: 'polySides', label: 'Multigon sides (if multigon)', type: 'range', min: 3, max: 12, step: 1, def: 6, show: p => p.baseShape === 'multigon' || p.baseShape === 'circle-collar', hint: p => p.baseShape === 'circle-collar' ? 'Collar pads: 4 → square grid, otherwise 6 → hex grid' : '' },
+    { key: 'outerWidth', label: 'Outer width / pitch (flat-to-flat)', type: 'range', min: 25, max: 250, step: 0.5, def: 70, unit: 'mm' },
+    { key: 'outerDepth', label: 'Outer depth (for box shape)', type: 'range', min: 25, max: 250, step: 0.5, def: 70, unit: 'mm', show: p => p.baseShape === 'box' },
+    { key: 'height', label: 'Total height', type: 'range', min: 15, max: 220, step: 0.5, def: 60, unit: 'mm' },
+    { key: 'cornerRadius', label: 'Vertical corner fillet', type: 'range', min: 0.5, max: 25, step: 0.5, def: 4, unit: 'mm', show: p => p.baseShape !== 'circle-collar' },
+    { key: 'wallThickness', label: 'Wall thickness', type: 'range', min: 1.2, max: 8, step: 0.1, def: 2.4, unit: 'mm' },
+    { key: 'baseThickness', label: 'Bottom floor thickness', type: 'range', min: 1.2, max: 10, step: 0.1, def: 2.4, unit: 'mm' },
+  ] },
+  { id: 'mechanism', title: 'Interlock Strategy & Joint Type', open: true, params: [
+    { key: 'jointType', label: 'Locking mechanism', type: 'select', options: ['dovetail', 'snap-cantilever', 'magnetic', 't-slot', 'puzzle', 'none'], def: 'dovetail' },
+    { key: 'polarityMode', label: 'Polarity layout', type: 'select', options: ['hermaphroditic', 'alternating', 'all-female-clip'], def: 'hermaphroditic', show: p => p.jointType !== 'none' },
+    { key: 'activeSides', label: 'Active sides mask', type: 'select', options: ['all', 'opposite-2', 'adjacent-2', 'front-only', 'custom-step'], def: 'all', show: p => p.jointType !== 'none' },
+    { key: 'jointsPerSide', label: 'Connectors per flat wall', type: 'range', min: 1, max: 4, step: 1, def: 1, show: p => p.jointType !== 'none' },
+    { key: 'hermSplit', label: 'Hermaphrodite split mode', type: 'select', options: ['side-by-side', 'top-bottom'], def: 'side-by-side', show: p => p.jointType !== 'none' && p.polarityMode === 'hermaphroditic' },
+    { key: 'hermSpacing', label: 'Hermaphrodite pair offset', type: 'range', min: 6, max: 60, step: 0.5, def: 16, unit: 'mm', show: p => p.jointType !== 'none' },
+  ] },
+  { id: 'profile', title: 'Joint Dimensions', open: true, show: p => p.jointType !== 'none' && p.jointType !== 'magnetic', params: [
+    { key: 'jointDepth', label: 'Protrusion depth (male height)', type: 'range', min: 1.5, max: 12, step: 0.1, def: 3.2, unit: 'mm' },
+    { key: 'jointWidth', label: 'Neck / base width', type: 'range', min: 3, max: 30, step: 0.2, def: 7.0, unit: 'mm', show: p => p.jointType !== 'snap-cantilever' },
+    { key: 'dovetailAngle', label: 'Dovetail flare angle', type: 'range', min: 15, max: 60, step: 1, def: 45, unit: '°', show: p => p.jointType === 'dovetail' },
+    { key: 'jointHeightFrac', label: 'Vertical span of joint', type: 'range', min: 0.2, max: 1.0, step: 0.02, def: 0.82 },
+    { key: 'jointZOffset', label: 'Vertical start offset from bottom', type: 'range', min: 0, max: 30, step: 0.5, def: 3.0, unit: 'mm' },
+    { key: 'stopLedge', label: 'Top/Bottom mechanical stopper', type: 'check', def: true, show: p => ['dovetail', 't-slot', 'puzzle'].includes(p.jointType) },
+    { key: 'snapHookLip', label: 'Snap-fit hook catch overhang', type: 'range', min: 0.4, max: 2.5, step: 0.1, def: 1.0, unit: 'mm', show: p => p.jointType === 'snap-cantilever' },
+    { key: 'snapBeamThick', label: 'Cantilever beam thickness', type: 'range', min: 0.8, max: 3.0, step: 0.1, def: 1.4, unit: 'mm', show: p => p.jointType === 'snap-cantilever' },
+    { key: 'snapSlotGap', label: 'Flex relief slot width', type: 'range', min: 0.8, max: 4.0, step: 0.1, def: 1.5, unit: 'mm', show: p => p.jointType === 'snap-cantilever' },
+  ] },
+  { id: 'magnet', title: 'Magnetic Pocket Settings', open: true, show: p => p.jointType === 'magnetic', params: [
+    { key: 'magDiameter', label: 'Magnet diameter (e.g. 6mm, 8mm)', type: 'range', min: 3, max: 20, step: 0.5, def: 6.0, unit: 'mm' },
+    { key: 'magThickness', label: 'Magnet thickness (e.g. 2mm, 3mm)', type: 'range', min: 1, max: 6, step: 0.5, def: 2.0, unit: 'mm' },
+    { key: 'magInsertStyle', label: 'Magnet insertion type', type: 'select', options: ['press-fit-side', 'top-drop-slot', 'embedded-pause'], def: 'top-drop-slot' },
+    { key: 'magWallSkin', label: 'Thin wall over magnet', type: 'range', min: 0.4, max: 1.6, step: 0.1, def: 0.6, unit: 'mm' },
+    { key: 'magRows', label: 'Magnet vertical pairs per side', type: 'range', min: 1, max: 3, step: 1, def: 2 },
+  ] },
+  { id: 'dfam', title: '3D Printability & Tolerances', open: true, params: [
+    { key: 'clearance', label: 'XY Interlock clearance (gap)', type: 'range', min: 0.05, max: 0.60, step: 0.01, def: 0.20, unit: 'mm' },
+    { key: 'zClearance', label: 'Vertical Z clearance', type: 'range', min: 0.05, max: 0.60, step: 0.02, def: 0.24, unit: 'mm' },
+    { key: 'filamentPreset', label: 'Filament calibration guide', type: 'select', options: ['PLA (Stiff)', 'PETG (Recommended for Snap)', 'ABS / ASA', 'TPU (Flex)'], def: 'PLA (Stiff)' },
+    { key: 'elephantChamfer', label: 'Bottom elephant-foot chamfer', type: 'range', min: 0, max: 3.0, step: 0.1, def: 0.8, unit: 'mm' },
+    { key: 'overhangAngle', label: 'Support-free taper angle', type: 'range', min: 35, max: 60, step: 1, def: 45, unit: '°' },
+    { key: 'leadInChamfer', label: 'Sliding lead-in bevel', type: 'range', min: 0, max: 3.0, step: 0.1, def: 1.0, unit: 'mm' },
+    { key: 'cornerRelief', label: 'Inside corner dogbone relief', type: 'check', def: true },
+  ] },
+  { id: 'compartment', title: 'Vertical Stacking & Interior', open: false, params: [
+    { key: 'stackableLip', label: 'Top/Bottom vertical stacking rim', type: 'check', def: true },
+    { key: 'stackLipHeight', label: 'Stacking rim height', type: 'range', min: 1.5, max: 8, step: 0.2, def: 3.0, unit: 'mm', show: p => p.stackableLip },
+    { key: 'innerFillet', label: 'Bottom interior scoop fillet', type: 'range', min: 0, max: 15, step: 0.5, def: 3.0, unit: 'mm' },
+    { key: 'dividersX', label: 'Internal X dividers', type: 'range', min: 0, max: 5, step: 1, def: 0 },
+    { key: 'dividersY', label: 'Internal Y / Radial dividers', type: 'range', min: 0, max: 6, step: 1, def: 0 },
+    { key: 'dividerHeight', label: 'Divider height fraction', type: 'range', min: 0.2, max: 1.0, step: 0.05, def: 0.85, show: p => p.dividersX > 0 || p.dividersY > 0 },
+    { key: 'labelLedge', label: 'Front label / finger tab', type: 'check', def: false },
+    { key: 'frontCutout', label: 'Front scoop cutout (bin style)', type: 'range', min: 0, max: 0.7, step: 0.05, def: 0 },
+  ] },
+  { id: 'view', title: 'Assembly Simulation & Mesh Quality', open: false, params: [
+    { key: 'assemblyMode', label: 'Tessellation preview', type: 'select', options: ['single', 'pair-1x2', 'cluster-3', 'grid-2x2', 'vertical-stack'], def: 'pair-1x2' },
+    { key: 'slideEngage', label: 'Slide / lock engagement', type: 'range', min: 0, max: 100, step: 1, def: 85, unit: '%', live: true },
+    { key: 'exportTarget', label: 'What to export', type: 'select', options: ['single-unit', 'full-assembly', 'dogbone-clip-only'], def: 'single-unit', live: true },
+    { key: 'curveSegs', label: 'Curve resolution', type: 'range', min: 16, max: 128, step: 4, def: 64 },
+    { key: 'heightSegs', label: 'Vertical Z segments', type: 'range', min: 16, max: 160, step: 4, def: 64 },
+  ] },
+  { id: 'visual', title: 'Color, Material & Scene', open: false, params: [
+    { key: 'colorPrimary', label: 'Primary unit color', type: 'color', def: '#d9a35b', live: true },
+    { key: 'colorJoint', label: 'Highlight joint faces', type: 'check', def: true, live: true },
+    { key: 'colorMale', label: 'Male connector tint', type: 'color', def: '#e07a3a', live: true },
+    { key: 'colorFemale', label: 'Female socket tint', type: 'color', def: '#3a90b8', live: true },
+    { key: 'ghostOpacity', label: 'Neighbor unit opacity', type: 'range', min: 0.15, max: 1.0, step: 0.05, def: 0.45, live: true },
+    { key: 'roughness', label: 'Surface roughness', type: 'range', min: 0, max: 1, step: 0.01, def: 0.45, live: true },
+    { key: 'metalness', label: 'Metalness', type: 'range', min: 0, max: 1, step: 0.01, def: 0.05, live: true },
+    { key: 'clearcoat', label: 'Satin sheen', type: 'range', min: 0, max: 1, step: 0.01, def: 0.15, live: true },
+    { key: 'flatShading', label: 'Flat CAD shading', type: 'check', def: false, live: true },
+    { key: 'wireframe', label: 'Wireframe overlay', type: 'check', def: false, live: true },
+    { key: 'autoRotate', label: 'Auto-rotate turntable', type: 'check', def: false, live: true },
+    { key: 'showGrid', label: 'Show build-plate grid', type: 'check', def: true, live: true },
+  ] },
+];
+
+export const DEFAULTS = Object.fromEntries(SCHEMA.flatMap(g => g.params.map(p => [p.key, p.def])));
+
+// PRESETS (PRD §5.2)
+export const PRESETS = {
+  'Hex Honeycomb Dovetail': { ...DEFAULTS, baseShape: 'hexagon', jointType: 'dovetail', polarityMode: 'hermaphroditic', stopLedge: true, assemblyMode: 'cluster-3' },
+  'Grid Box Organizer (Snap-Fit)': { ...DEFAULTS, baseShape: 'box', outerWidth: 75, outerDepth: 75, height: 50, cornerRadius: 5, jointType: 'snap-cantilever', polarityMode: 'hermaphroditic', hermSpacing: 22, jointDepth: 3.6, snapHookLip: 0.5, snapBeamThick: 1.2, snapSlotGap: 1.6, jointHeightFrac: 0.6, stackableLip: true, filamentPreset: 'PETG (Recommended for Snap)', clearance: 0.25, assemblyMode: 'grid-2x2' },
+  'Magnetic Desk Cup (Round Collar)': { ...DEFAULTS, baseShape: 'circle-collar', polySides: 6, outerWidth: 80, height: 95, jointType: 'magnetic', polarityMode: 'hermaphroditic', hermSpacing: 14, magDiameter: 6, magThickness: 2, magInsertStyle: 'top-drop-slot', magRows: 2, stackableLip: false, innerFillet: 5, assemblyMode: 'cluster-3' },
+  'Heavy-Duty Hardware Bin (T-Slot)': { ...DEFAULTS, baseShape: 'box', outerWidth: 100, outerDepth: 150, height: 75, cornerRadius: 6, wallThickness: 3, baseThickness: 3, jointType: 't-slot', jointWidth: 9, jointDepth: 3.6, polarityMode: 'hermaphroditic', hermSpacing: 24, frontCutout: 0.45, labelLedge: true, stackableLip: false, innerFillet: 6, assemblyMode: 'pair-1x2' },
+  'Puzzle Tray Divider (Multi-Compartment)': { ...DEFAULTS, baseShape: 'box', outerWidth: 120, outerDepth: 120, height: 30, cornerRadius: 6, jointType: 'puzzle', jointWidth: 9, jointDepth: 2.4, polarityMode: 'hermaphroditic', hermSpacing: 26, jointHeightFrac: 0.7, jointZOffset: 2, dividersX: 1, dividersY: 1, dividerHeight: 0.8, stackableLip: false, clearance: 0.25, assemblyMode: 'grid-2x2' },
+  'Octa-Tessellation Module': { ...DEFAULTS, baseShape: 'octagon', outerWidth: 90, height: 55, jointType: 'dovetail', polarityMode: 'hermaphroditic', activeSides: 'all', hermSpacing: 15, jointWidth: 6, jointDepth: 2.8, stackableLip: false, assemblyMode: 'pair-1x2' },
+  'Wall Honeycomb Shelf': { ...DEFAULTS, baseShape: 'hexagon', outerWidth: 140, height: 120, wallThickness: 3.2, baseThickness: 3.2, cornerRadius: 6, jointType: 'dovetail', jointsPerSide: 2, hermSpacing: 18, jointWidth: 8, jointDepth: 3.4, dividersX: 0, dividersY: 0, stackableLip: false, innerFillet: 4, assemblyMode: 'cluster-3' },
+};

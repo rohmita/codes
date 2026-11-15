@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TessellaLock Studio 3D</title>
+<meta name="description" content="Parametric generator for tessellating, interlocking, 3D-printable storage containers.">
+<!--FONTS-->
+<style>
+:root {
+  --bg: #111214; --bg-2: #16171a; --panel: #1a1b1e; --panel-2: #212226; --line: #2c2d32; --line-2: #3a3b41;
+  --text: #ece9e2; --muted: #9b988f; --faint: #6d6b65;
+  --accent: #d9a35b; --accent-ink: #1b1306; --cyan: #4ea8de; --male: #e0603a; --female: #3aa0e0;
+  --ok: #6cc28a; --warn: #e8913a; --bad: #e0604a;
+  --viewport: #141518; --hud: rgba(20, 21, 24, .82); --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --r: 10px; --font-d: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #efede7; --bg-2: #e7e4dc; --panel: #fbfaf7; --panel-2: #f1efe9; --line: #dedad0; --line-2: #cbc6b9;
+  --text: #22201b; --muted: #6b675e; --faint: #9a958a;
+  --accent: #b97d2c; --accent-ink: #fffaf0; --cyan: #2f86bf;
+  --viewport: #e9e7e1; --hud: rgba(251, 250, 247, .9); --shadow: 0 10px 30px rgba(40,30,10,.12);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 var(--font); -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+.app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; height: 100dvh; }
+/* ------------ panel ------------ */
+.panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--line); }
+.brand { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.brand h1 { margin: 0; font: 700 21px/1.1 var(--font-d); letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+.brand h1 .mark { width: 26px; height: 26px; flex: none; }
+.brand h1 small { font: 500 11px var(--mono); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); padding: 2px 6px; border-radius: 5px; letter-spacing: .04em; }
+.themebtn { margin-left: auto; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--muted); border-radius: 6px; padding: 3px 8px; font: 500 11px var(--mono); cursor: pointer; }
+.themebtn:hover { color: var(--text); border-color: var(--accent); }
+.brand p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
+.preset { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line); align-items: center; }
+.preset label { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.preset select { flex: 1; min-width: 0; }
+.scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0 18px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+details.group { border-bottom: 1px solid var(--line); }
+details.group > summary { list-style: none; cursor: pointer; padding: 13px 18px; display: flex; align-items: center; gap: 10px; font: 600 13px var(--font); user-select: none; }
+details.group > summary::-webkit-details-marker { display: none; }
+details.group > summary .idx { font: 500 11px var(--mono); color: var(--accent); width: 20px; }
+details.group > summary .chev { margin-left: auto; width: 10px; height: 10px; border-right: 1.6px solid var(--muted); border-bottom: 1.6px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; }
+details.group[open] > summary .chev { transform: rotate(45deg); }
+details.group > summary:hover { background: var(--panel-2); }
+.rows { padding: 2px 18px 14px; display: grid; gap: 11px; }
+.row { display: grid; gap: 5px; }
+.row .top { display: flex; align-items: baseline; gap: 8px; }
+.row .lbl { font-size: 12.5px; color: var(--text); flex: 1; min-width: 0; }
+.row .hint { font-size: 11px; color: var(--faint); }
+.row .num { width: 74px; text-align: right; font: 500 12px var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; color: var(--text); }
+.row .num:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.row .unit { font: 11px var(--mono); color: var(--muted); width: 18px; }
+.row.hide { display: none; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--accent) var(--p, 50%), var(--line-2) var(--p, 50%)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: var(--line-2); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+select { width: 100%; appearance: none; background: var(--panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239b988f' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center; border: 1px solid var(--line); border-radius: 7px; padding: 6px 28px 6px 9px; font-size: 12.5px; }
+select:focus { outline: 1px solid var(--accent); }
+.switch { position: relative; width: 34px; height: 19px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; border-radius: 19px; background: var(--line-2); transition: background .15s; }
+.switch span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 13px; height: 13px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(15px); }
+.switch input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+input[type=color] { width: 40px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
+.exportbar { border-top: 1px solid var(--line); padding: 12px 18px 14px; display: grid; gap: 8px; background: var(--panel); }
+.exportbar .lbl { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
+.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.btn { border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 7px; padding: 7px 6px; font: 500 12px var(--mono); cursor: pointer; transition: border-color .12s, background .12s; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.wide { grid-column: span 2; }
+/* ------------ viewport ------------ */
+.view { position: relative; min-width: 0; min-height: 0; background: var(--viewport); overflow: hidden; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.ov { position: absolute; z-index: 2; }
+.bar { display: flex; gap: 4px; padding: 4px; background: var(--hud); border: 1px solid var(--line); border-radius: 9px; backdrop-filter: blur(8px); box-shadow: var(--shadow); align-items: center; }
+.tb { border: 0; background: transparent; padding: 6px 9px; border-radius: 6px; font: 500 11.5px var(--mono); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.tb:hover { color: var(--text); background: var(--panel-2); }
+.tb.on { color: var(--accent-ink); background: var(--accent); }
+.tb:focus-visible { outline: 2px solid var(--cyan); }
+.sep { width: 1px; align-self: stretch; background: var(--line); margin: 3px 2px; }
+.tl { top: 14px; left: 14px; display: grid; gap: 8px; justify-items: start; }
+.tr { top: 14px; right: 14px; display: grid; gap: 8px; justify-items: end; }
+.engage { top: 14px; right: 14px; width: min(400px, calc(100% - 400px)); }
+.engage .bar input[type=range] { flex: 1; min-width: 60px; }
+.engage .bar { padding: 8px 12px; gap: 12px; }
+.engage .k { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+.engage .v { font: 600 12px var(--mono); color: var(--accent); width: 40px; text-align: right; }
+.engage select { width: auto; padding: 4px 26px 4px 8px; font-size: 12px; }
+.cutpos { width: 120px; }
+.hud { left: 14px; bottom: 14px; width: 318px; max-width: calc(100% - 28px); background: var(--hud); border: 1px solid var(--line); border-radius: 11px; backdrop-filter: blur(8px); box-shadow: var(--shadow); padding: 11px 13px 10px; font-size: 12px; }
+.hud h3 { margin: 0 0 7px; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.hud h3 button { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 2px; }
+.hud dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; }
+.hud dt { color: var(--muted); }
+.hud dd { margin: 0; text-align: right; font: 500 12px var(--mono); }
+.hud .ok { color: var(--ok); } .hud .bad { color: var(--bad); } .hud .warn { color: var(--warn); }
+.hud ul { margin: 8px 0 0; padding: 7px 0 0 0; list-style: none; border-top: 1px solid var(--line); display: grid; gap: 4px; max-height: 120px; overflow: auto; }
+.hud li { color: var(--warn); font-size: 11.5px; line-height: 1.35; padding-left: 14px; position: relative; }
+.hud li::before { content: "▲"; position: absolute; left: 0; top: 1px; font-size: 8px; }
+.hud.min dl, .hud.min ul { display: none; }
+.legend { right: 14px; bottom: 14px; display: flex; gap: 10px; padding: 7px 11px; background: var(--hud); border: 1px solid var(--line); border-radius: 9px; font: 500 11px var(--mono); color: var(--muted); backdrop-filter: blur(8px); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.busy { position: absolute; right: 14px; top: 62px; font: 500 11px var(--mono); color: var(--muted); opacity: 0; transition: opacity .2s; z-index: 2; }
+.busy.on { opacity: 1; }
+.toast { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font: 500 12px var(--mono); opacity: 0; transition: .2s; z-index: 5; pointer-events: none; }
+.toast.on { opacity: 1; transform: translateX(-50%); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 1180px) { .tl .bar .lbl-long { display: none; } .hud { width: 260px; } }
+@media (max-width: 820px) {
+  .app { display: flex; flex-direction: column; height: auto; }
+  .view { order: -1; flex: none; position: sticky; top: 0; height: 70vh; height: 70svh; z-index: 3; border-bottom: 1px solid var(--line); }
+  .panel { border-right: 0; }
+  .scroll { overflow: visible; }
+  .tl { top: 10px; left: 10px; } .tr { top: 10px; right: 10px; }
+  .engage { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; }
+  .hud { display: none; } .legend { display: none; }
+  .hud-m { display: block !important; }
+  .busy { top: auto; bottom: 64px; }
+  .tb { padding: 6px 7px; }
+}
+.hud-m { display: none; margin: 0 16px 0; }
+.hud-m .hud { position: static; width: auto; max-width: none; display: block; box-shadow: none; margin-top: 12px; }
+</style>
+<!--IMPORTMAP-->
+</head>
+<body>
+<div class="app">
+  <aside class="panel" aria-label="Parameters">
+    <div class="brand">
+      <h1><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l12 7v14l-12 7-12-7V9z" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M16 9l6 3.5v7L16 23l-6-3.5v-7z" fill="var(--accent)" opacity=".35"/><path d="M10 12.5L16 16l6-3.5M16 16v7" fill="none" stroke="var(--accent)" stroke-width="1.6"/></svg>TessellaLock <small>STUDIO 3D</small><button class="themebtn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle light / dark theme">Light</button></h1>
+      <p>Parametric interlocking &amp; space-filling container generator for FDM/SLA.</p>
+    </div>
+    <div class="preset"><label for="presetSel">Preset</label><select id="presetSel"></select></div>
+    <div class="hud-m" id="hudMobile"></div>
+    <div class="scroll" id="groups"></div>
+    <div class="exportbar">
+      <div class="lbl"><span>Export</span><span id="fnameHint"></span></div>
+      <div class="btns">
+        <button class="btn primary" data-exp="stl" title="Binary STL, Z-up, mm">STL</button>
+        <button class="btn" data-exp="obj" title="ASCII OBJ with vertex colours, Y-up, mm">OBJ</button>
+        <button class="btn" data-exp="glb" title="Binary glTF 2.0, metres">GLB</button>
+        <button class="btn" data-exp="png" title="2048 px transparent render">PNG</button>
+        <button class="btn" data-exp="json" title="Save all parameters">JSON</button>
+        <button class="btn" id="loadBtn" title="Load parameters from JSON">Load</button>
+        <button class="btn primary wide" data-exp="zip" title="STL + OBJ + GLB + PNG + JSON + PRINT_GUIDE.txt">Export all .zip</button>
+      </div>
+      <input type="file" id="loadFile" accept=".json,application/json" hidden>
+    </div>
+  </aside>
+  <main class="view" id="view">
+    <canvas id="cv" aria-label="3D viewport"></canvas>
+    <div class="ov tl">
+      <div class="bar" role="toolbar" aria-label="Camera">
+        <button class="tb" data-cam="front">Front</button><button class="tb" data-cam="side">Side</button><button class="tb" data-cam="top">Top</button><button class="tb on" data-cam="iso">Iso</button>
+      </div>
+      <div class="bar" role="toolbar" aria-label="Display">
+        <button class="tb" data-tog="autoRotate" title="Auto-rotate turntable">Rotate</button>
+        <button class="tb" data-tog="wireframe">Wire</button>
+        <button class="tb" data-tog="showGrid">Grid</button>
+        <button class="tb on" data-tog="shadow">Shadow</button>
+      </div>
+      <div class="bar" role="toolbar" aria-label="Section cut">
+        <span class="tb" style="cursor:default" title="Section cut + clearance heatmap">Cut</span>
+        <button class="tb on" data-cut="off">Off</button><button class="tb" data-cut="y" title="Horizontal (Y) section">Y</button><button class="tb" data-cut="x" title="Vertical X section">X</button><button class="tb" data-cut="z" title="Vertical Z section">Z</button>
+        <input type="range" class="cutpos" id="cutPos" min="0" max="100" step="0.5" value="50" aria-label="Section position">
+      </div>
+    </div>
+    <div class="ov engage">
+      <div class="bar">
+        <select id="asmSel" aria-label="Tessellation preview"></select>
+        <span class="k">Engage</span>
+        <input type="range" id="engage" min="0" max="100" step="1" aria-label="Slide / lock engagement">
+        <span class="v" id="engageV">85%</span>
+      </div>
+    </div>
+    <div class="busy" id="busy">rebuilding…</div>
+    <section class="ov hud" id="hud" aria-live="polite"></section>
+    <div class="ov legend" id="legend"></div>
+    <div class="toast" id="toast"></div>
+  </main>
+</div>
+<!--APP-->
+</body>
+</html>

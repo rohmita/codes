@@ -1,0 +1,2640 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TessellaLock Studio 3D</title>
+<meta name="description" content="Parametric generator for tessellating, interlocking, 3D-printable storage containers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #111214; --bg-2: #16171a; --panel: #1a1b1e; --panel-2: #212226; --line: #2c2d32; --line-2: #3a3b41;
+  --text: #ece9e2; --muted: #9b988f; --faint: #6d6b65;
+  --accent: #d9a35b; --accent-ink: #1b1306; --cyan: #4ea8de; --male: #e0603a; --female: #3aa0e0;
+  --ok: #6cc28a; --warn: #e8913a; --bad: #e0604a;
+  --viewport: #141518; --hud: rgba(20, 21, 24, .82); --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --r: 10px; --font-d: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #efede7; --bg-2: #e7e4dc; --panel: #fbfaf7; --panel-2: #f1efe9; --line: #dedad0; --line-2: #cbc6b9;
+  --text: #22201b; --muted: #6b675e; --faint: #9a958a;
+  --accent: #b97d2c; --accent-ink: #fffaf0; --cyan: #2f86bf;
+  --viewport: #e9e7e1; --hud: rgba(251, 250, 247, .9); --shadow: 0 10px 30px rgba(40,30,10,.12);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 var(--font); -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+.app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; height: 100dvh; }
+/* ------------ panel ------------ */
+.panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--line); }
+.brand { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.brand h1 { margin: 0; font: 700 21px/1.1 var(--font-d); letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+.brand h1 .mark { width: 26px; height: 26px; flex: none; }
+.brand h1 small { font: 500 11px var(--mono); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); padding: 2px 6px; border-radius: 5px; letter-spacing: .04em; }
+.themebtn { margin-left: auto; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--muted); border-radius: 6px; padding: 3px 8px; font: 500 11px var(--mono); cursor: pointer; }
+.themebtn:hover { color: var(--text); border-color: var(--accent); }
+.brand p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
+.preset { display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line); align-items: center; }
+.preset label { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.preset select { flex: 1; min-width: 0; }
+.scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0 18px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+details.group { border-bottom: 1px solid var(--line); }
+details.group > summary { list-style: none; cursor: pointer; padding: 13px 18px; display: flex; align-items: center; gap: 10px; font: 600 13px var(--font); user-select: none; }
+details.group > summary::-webkit-details-marker { display: none; }
+details.group > summary .idx { font: 500 11px var(--mono); color: var(--accent); width: 20px; }
+details.group > summary .chev { margin-left: auto; width: 10px; height: 10px; border-right: 1.6px solid var(--muted); border-bottom: 1.6px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; }
+details.group[open] > summary .chev { transform: rotate(45deg); }
+details.group > summary:hover { background: var(--panel-2); }
+.rows { padding: 2px 18px 14px; display: grid; gap: 11px; }
+.row { display: grid; gap: 5px; }
+.row .top { display: flex; align-items: baseline; gap: 8px; }
+.row .lbl { font-size: 12.5px; color: var(--text); flex: 1; min-width: 0; }
+.row .hint { font-size: 11px; color: var(--faint); }
+.row .num { width: 74px; text-align: right; font: 500 12px var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; color: var(--text); }
+.row .num:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.row .unit { font: 11px var(--mono); color: var(--muted); width: 18px; }
+.row.hide { display: none; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--accent) var(--p, 50%), var(--line-2) var(--p, 50%)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: var(--line-2); }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--accent); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+select { width: 100%; appearance: none; background: var(--panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239b988f' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center; border: 1px solid var(--line); border-radius: 7px; padding: 6px 28px 6px 9px; font-size: 12.5px; }
+select:focus { outline: 1px solid var(--accent); }
+.switch { position: relative; width: 34px; height: 19px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; border-radius: 19px; background: var(--line-2); transition: background .15s; }
+.switch span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 13px; height: 13px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(15px); }
+.switch input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+input[type=color] { width: 40px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
+.exportbar { border-top: 1px solid var(--line); padding: 12px 18px 14px; display: grid; gap: 8px; background: var(--panel); }
+.exportbar .lbl { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
+.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.btn { border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 7px; padding: 7px 6px; font: 500 12px var(--mono); cursor: pointer; transition: border-color .12s, background .12s; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.wide { grid-column: span 2; }
+/* ------------ viewport ------------ */
+.view { position: relative; min-width: 0; min-height: 0; background: var(--viewport); overflow: hidden; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.ov { position: absolute; z-index: 2; }
+.bar { display: flex; gap: 4px; padding: 4px; background: var(--hud); border: 1px solid var(--line); border-radius: 9px; backdrop-filter: blur(8px); box-shadow: var(--shadow); align-items: center; }
+.tb { border: 0; background: transparent; padding: 6px 9px; border-radius: 6px; font: 500 11.5px var(--mono); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.tb:hover { color: var(--text); background: var(--panel-2); }
+.tb.on { color: var(--accent-ink); background: var(--accent); }
+.tb:focus-visible { outline: 2px solid var(--cyan); }
+.sep { width: 1px; align-self: stretch; background: var(--line); margin: 3px 2px; }
+.tl { top: 14px; left: 14px; display: grid; gap: 8px; justify-items: start; }
+.tr { top: 14px; right: 14px; display: grid; gap: 8px; justify-items: end; }
+.engage { top: 14px; right: 14px; width: min(400px, calc(100% - 400px)); }
+.engage .bar input[type=range] { flex: 1; min-width: 60px; }
+.engage .bar { padding: 8px 12px; gap: 12px; }
+.engage .k { font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+.engage .v { font: 600 12px var(--mono); color: var(--accent); width: 40px; text-align: right; }
+.engage select { width: auto; padding: 4px 26px 4px 8px; font-size: 12px; }
+.cutpos { width: 120px; }
+.hud { left: 14px; bottom: 14px; width: 318px; max-width: calc(100% - 28px); background: var(--hud); border: 1px solid var(--line); border-radius: 11px; backdrop-filter: blur(8px); box-shadow: var(--shadow); padding: 11px 13px 10px; font-size: 12px; }
+.hud h3 { margin: 0 0 7px; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.hud h3 button { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 2px; }
+.hud dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; }
+.hud dt { color: var(--muted); }
+.hud dd { margin: 0; text-align: right; font: 500 12px var(--mono); }
+.hud .ok { color: var(--ok); } .hud .bad { color: var(--bad); } .hud .warn { color: var(--warn); }
+.hud ul { margin: 8px 0 0; padding: 7px 0 0 0; list-style: none; border-top: 1px solid var(--line); display: grid; gap: 4px; max-height: 120px; overflow: auto; }
+.hud li { color: var(--warn); font-size: 11.5px; line-height: 1.35; padding-left: 14px; position: relative; }
+.hud li::before { content: "▲"; position: absolute; left: 0; top: 1px; font-size: 8px; }
+.hud.min dl, .hud.min ul { display: none; }
+.legend { right: 14px; bottom: 14px; display: flex; gap: 10px; padding: 7px 11px; background: var(--hud); border: 1px solid var(--line); border-radius: 9px; font: 500 11px var(--mono); color: var(--muted); backdrop-filter: blur(8px); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.busy { position: absolute; right: 14px; top: 62px; font: 500 11px var(--mono); color: var(--muted); opacity: 0; transition: opacity .2s; z-index: 2; }
+.busy.on { opacity: 1; }
+.toast { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font: 500 12px var(--mono); opacity: 0; transition: .2s; z-index: 5; pointer-events: none; }
+.toast.on { opacity: 1; transform: translateX(-50%); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 1180px) { .tl .bar .lbl-long { display: none; } .hud { width: 260px; } }
+@media (max-width: 820px) {
+  .app { display: flex; flex-direction: column; height: auto; }
+  .view { order: -1; flex: none; position: sticky; top: 0; height: 70vh; height: 70svh; z-index: 3; border-bottom: 1px solid var(--line); }
+  .panel { border-right: 0; }
+  .scroll { overflow: visible; }
+  .tl { top: 10px; left: 10px; } .tr { top: 10px; right: 10px; }
+  .engage { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; }
+  .hud { display: none; } .legend { display: none; }
+  .hud-m { display: block !important; }
+  .busy { top: auto; bottom: 64px; }
+  .tb { padding: 6px 7px; }
+}
+.hud-m { display: none; margin: 0 16px 0; }
+.hud-m .hud { position: static; width: auto; max-width: none; display: block; box-shadow: none; margin-top: 12px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <aside class="panel" aria-label="Parameters">
+    <div class="brand">
+      <h1><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l12 7v14l-12 7-12-7V9z" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="M16 9l6 3.5v7L16 23l-6-3.5v-7z" fill="var(--accent)" opacity=".35"/><path d="M10 12.5L16 16l6-3.5M16 16v7" fill="none" stroke="var(--accent)" stroke-width="1.6"/></svg>TessellaLock <small>STUDIO 3D</small><button class="themebtn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle light / dark theme">Light</button></h1>
+      <p>Parametric interlocking &amp; space-filling container generator for FDM/SLA.</p>
+    </div>
+    <div class="preset"><label for="presetSel">Preset</label><select id="presetSel"></select></div>
+    <div class="hud-m" id="hudMobile"></div>
+    <div class="scroll" id="groups"></div>
+    <div class="exportbar">
+      <div class="lbl"><span>Export</span><span id="fnameHint"></span></div>
+      <div class="btns">
+        <button class="btn primary" data-exp="stl" title="Binary STL, Z-up, mm">STL</button>
+        <button class="btn" data-exp="obj" title="ASCII OBJ with vertex colours, Y-up, mm">OBJ</button>
+        <button class="btn" data-exp="glb" title="Binary glTF 2.0, metres">GLB</button>
+        <button class="btn" data-exp="png" title="2048 px transparent render">PNG</button>
+        <button class="btn" data-exp="json" title="Save all parameters">JSON</button>
+        <button class="btn" id="loadBtn" title="Load parameters from JSON">Load</button>
+        <button class="btn primary wide" data-exp="zip" title="STL + OBJ + GLB + PNG + JSON + PRINT_GUIDE.txt">Export all .zip</button>
+      </div>
+      <input type="file" id="loadFile" accept=".json,application/json" hidden>
+    </div>
+  </aside>
+  <main class="view" id="view">
+    <canvas id="cv" aria-label="3D viewport"></canvas>
+    <div class="ov tl">
+      <div class="bar" role="toolbar" aria-label="Camera">
+        <button class="tb" data-cam="front">Front</button><button class="tb" data-cam="side">Side</button><button class="tb" data-cam="top">Top</button><button class="tb on" data-cam="iso">Iso</button>
+      </div>
+      <div class="bar" role="toolbar" aria-label="Display">
+        <button class="tb" data-tog="autoRotate" title="Auto-rotate turntable">Rotate</button>
+        <button class="tb" data-tog="wireframe">Wire</button>
+        <button class="tb" data-tog="showGrid">Grid</button>
+        <button class="tb on" data-tog="shadow">Shadow</button>
+      </div>
+      <div class="bar" role="toolbar" aria-label="Section cut">
+        <span class="tb" style="cursor:default" title="Section cut + clearance heatmap">Cut</span>
+        <button class="tb on" data-cut="off">Off</button><button class="tb" data-cut="y" title="Horizontal (Y) section">Y</button><button class="tb" data-cut="x" title="Vertical X section">X</button><button class="tb" data-cut="z" title="Vertical Z section">Z</button>
+        <input type="range" class="cutpos" id="cutPos" min="0" max="100" step="0.5" value="50" aria-label="Section position">
+      </div>
+    </div>
+    <div class="ov engage">
+      <div class="bar">
+        <select id="asmSel" aria-label="Tessellation preview"></select>
+        <span class="k">Engage</span>
+        <input type="range" id="engage" min="0" max="100" step="1" aria-label="Slide / lock engagement">
+        <span class="v" id="engageV">85%</span>
+      </div>
+    </div>
+    <div class="busy" id="busy">rebuilding…</div>
+    <section class="ov hud" id="hud" aria-live="polite"></section>
+    <div class="ov legend" id="legend"></div>
+    <div class="toast" id="toast"></div>
+  </main>
+</div>
+<script type="module">
+// src/app.js
+import * as THREE2 from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { STLExporter } from "three/addons/exporters/STLExporter.js";
+import { OBJExporter } from "three/addons/exporters/OBJExporter.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { zipSync, strToU8 } from "three/addons/libs/fflate.module.js";
+
+// src/params.js
+var SCHEMA = [
+  { id: "geometry", title: "Base Shape & Tessellation", open: true, params: [
+    { key: "baseShape", label: "Base footprint shape", type: "select", options: ["box", "hexagon", "octagon", "triangle", "circle-collar", "multigon"], def: "hexagon" },
+    { key: "polySides", label: "Multigon sides (if multigon)", type: "range", min: 3, max: 12, step: 1, def: 6, show: (p) => p.baseShape === "multigon" || p.baseShape === "circle-collar", hint: (p) => p.baseShape === "circle-collar" ? "Collar pads: 4 \u2192 square grid, otherwise 6 \u2192 hex grid" : "" },
+    { key: "outerWidth", label: "Outer width / pitch (flat-to-flat)", type: "range", min: 25, max: 250, step: 0.5, def: 70, unit: "mm" },
+    { key: "outerDepth", label: "Outer depth (for box shape)", type: "range", min: 25, max: 250, step: 0.5, def: 70, unit: "mm", show: (p) => p.baseShape === "box" },
+    { key: "height", label: "Total height", type: "range", min: 15, max: 220, step: 0.5, def: 60, unit: "mm" },
+    { key: "cornerRadius", label: "Vertical corner fillet", type: "range", min: 0.5, max: 25, step: 0.5, def: 4, unit: "mm", show: (p) => p.baseShape !== "circle-collar" },
+    { key: "wallThickness", label: "Wall thickness", type: "range", min: 1.2, max: 8, step: 0.1, def: 2.4, unit: "mm" },
+    { key: "baseThickness", label: "Bottom floor thickness", type: "range", min: 1.2, max: 10, step: 0.1, def: 2.4, unit: "mm" }
+  ] },
+  { id: "mechanism", title: "Interlock Strategy & Joint Type", open: true, params: [
+    { key: "jointType", label: "Locking mechanism", type: "select", options: ["dovetail", "snap-cantilever", "magnetic", "t-slot", "puzzle", "none"], def: "dovetail" },
+    { key: "polarityMode", label: "Polarity layout", type: "select", options: ["hermaphroditic", "alternating", "all-female-clip"], def: "hermaphroditic", show: (p) => p.jointType !== "none" },
+    { key: "activeSides", label: "Active sides mask", type: "select", options: ["all", "opposite-2", "adjacent-2", "front-only", "custom-step"], def: "all", show: (p) => p.jointType !== "none" },
+    { key: "jointsPerSide", label: "Connectors per flat wall", type: "range", min: 1, max: 4, step: 1, def: 1, show: (p) => p.jointType !== "none" },
+    { key: "hermSplit", label: "Hermaphrodite split mode", type: "select", options: ["side-by-side", "top-bottom"], def: "side-by-side", show: (p) => p.jointType !== "none" && p.polarityMode === "hermaphroditic" },
+    { key: "hermSpacing", label: "Hermaphrodite pair offset", type: "range", min: 6, max: 60, step: 0.5, def: 16, unit: "mm", show: (p) => p.jointType !== "none" }
+  ] },
+  { id: "profile", title: "Joint Dimensions", open: true, show: (p) => p.jointType !== "none" && p.jointType !== "magnetic", params: [
+    { key: "jointDepth", label: "Protrusion depth (male height)", type: "range", min: 1.5, max: 12, step: 0.1, def: 3.2, unit: "mm" },
+    { key: "jointWidth", label: "Neck / base width", type: "range", min: 3, max: 30, step: 0.2, def: 7, unit: "mm", show: (p) => p.jointType !== "snap-cantilever" },
+    { key: "dovetailAngle", label: "Dovetail flare angle", type: "range", min: 15, max: 60, step: 1, def: 45, unit: "\xB0", show: (p) => p.jointType === "dovetail" },
+    { key: "jointHeightFrac", label: "Vertical span of joint", type: "range", min: 0.2, max: 1, step: 0.02, def: 0.82 },
+    { key: "jointZOffset", label: "Vertical start offset from bottom", type: "range", min: 0, max: 30, step: 0.5, def: 3, unit: "mm" },
+    { key: "stopLedge", label: "Top/Bottom mechanical stopper", type: "check", def: true, show: (p) => ["dovetail", "t-slot", "puzzle"].includes(p.jointType) },
+    { key: "snapHookLip", label: "Snap-fit hook catch overhang", type: "range", min: 0.4, max: 2.5, step: 0.1, def: 1, unit: "mm", show: (p) => p.jointType === "snap-cantilever" },
+    { key: "snapBeamThick", label: "Cantilever beam thickness", type: "range", min: 0.8, max: 3, step: 0.1, def: 1.4, unit: "mm", show: (p) => p.jointType === "snap-cantilever" },
+    { key: "snapSlotGap", label: "Flex relief slot width", type: "range", min: 0.8, max: 4, step: 0.1, def: 1.5, unit: "mm", show: (p) => p.jointType === "snap-cantilever" }
+  ] },
+  { id: "magnet", title: "Magnetic Pocket Settings", open: true, show: (p) => p.jointType === "magnetic", params: [
+    { key: "magDiameter", label: "Magnet diameter (e.g. 6mm, 8mm)", type: "range", min: 3, max: 20, step: 0.5, def: 6, unit: "mm" },
+    { key: "magThickness", label: "Magnet thickness (e.g. 2mm, 3mm)", type: "range", min: 1, max: 6, step: 0.5, def: 2, unit: "mm" },
+    { key: "magInsertStyle", label: "Magnet insertion type", type: "select", options: ["press-fit-side", "top-drop-slot", "embedded-pause"], def: "top-drop-slot" },
+    { key: "magWallSkin", label: "Thin wall over magnet", type: "range", min: 0.4, max: 1.6, step: 0.1, def: 0.6, unit: "mm" },
+    { key: "magRows", label: "Magnet vertical pairs per side", type: "range", min: 1, max: 3, step: 1, def: 2 }
+  ] },
+  { id: "dfam", title: "3D Printability & Tolerances", open: true, params: [
+    { key: "clearance", label: "XY Interlock clearance (gap)", type: "range", min: 0.05, max: 0.6, step: 0.01, def: 0.2, unit: "mm" },
+    { key: "zClearance", label: "Vertical Z clearance", type: "range", min: 0.05, max: 0.6, step: 0.02, def: 0.24, unit: "mm" },
+    { key: "filamentPreset", label: "Filament calibration guide", type: "select", options: ["PLA (Stiff)", "PETG (Recommended for Snap)", "ABS / ASA", "TPU (Flex)"], def: "PLA (Stiff)" },
+    { key: "elephantChamfer", label: "Bottom elephant-foot chamfer", type: "range", min: 0, max: 3, step: 0.1, def: 0.8, unit: "mm" },
+    { key: "overhangAngle", label: "Support-free taper angle", type: "range", min: 35, max: 60, step: 1, def: 45, unit: "\xB0" },
+    { key: "leadInChamfer", label: "Sliding lead-in bevel", type: "range", min: 0, max: 3, step: 0.1, def: 1, unit: "mm" },
+    { key: "cornerRelief", label: "Inside corner dogbone relief", type: "check", def: true }
+  ] },
+  { id: "compartment", title: "Vertical Stacking & Interior", open: false, params: [
+    { key: "stackableLip", label: "Top/Bottom vertical stacking rim", type: "check", def: true },
+    { key: "stackLipHeight", label: "Stacking rim height", type: "range", min: 1.5, max: 8, step: 0.2, def: 3, unit: "mm", show: (p) => p.stackableLip },
+    { key: "innerFillet", label: "Bottom interior scoop fillet", type: "range", min: 0, max: 15, step: 0.5, def: 3, unit: "mm" },
+    { key: "dividersX", label: "Internal X dividers", type: "range", min: 0, max: 5, step: 1, def: 0 },
+    { key: "dividersY", label: "Internal Y / Radial dividers", type: "range", min: 0, max: 6, step: 1, def: 0 },
+    { key: "dividerHeight", label: "Divider height fraction", type: "range", min: 0.2, max: 1, step: 0.05, def: 0.85, show: (p) => p.dividersX > 0 || p.dividersY > 0 },
+    { key: "labelLedge", label: "Front label / finger tab", type: "check", def: false },
+    { key: "frontCutout", label: "Front scoop cutout (bin style)", type: "range", min: 0, max: 0.7, step: 0.05, def: 0 }
+  ] },
+  { id: "view", title: "Assembly Simulation & Mesh Quality", open: false, params: [
+    { key: "assemblyMode", label: "Tessellation preview", type: "select", options: ["single", "pair-1x2", "cluster-3", "grid-2x2", "vertical-stack"], def: "pair-1x2" },
+    { key: "slideEngage", label: "Slide / lock engagement", type: "range", min: 0, max: 100, step: 1, def: 85, unit: "%", live: true },
+    { key: "exportTarget", label: "What to export", type: "select", options: ["single-unit", "full-assembly", "dogbone-clip-only"], def: "single-unit", live: true },
+    { key: "curveSegs", label: "Curve resolution", type: "range", min: 16, max: 128, step: 4, def: 64 },
+    { key: "heightSegs", label: "Vertical Z segments", type: "range", min: 16, max: 160, step: 4, def: 64 }
+  ] },
+  { id: "visual", title: "Color, Material & Scene", open: false, params: [
+    { key: "colorPrimary", label: "Primary unit color", type: "color", def: "#d9a35b", live: true },
+    { key: "colorJoint", label: "Highlight joint faces", type: "check", def: true, live: true },
+    { key: "colorMale", label: "Male connector tint", type: "color", def: "#e07a3a", live: true },
+    { key: "colorFemale", label: "Female socket tint", type: "color", def: "#3a90b8", live: true },
+    { key: "ghostOpacity", label: "Neighbor unit opacity", type: "range", min: 0.15, max: 1, step: 0.05, def: 0.45, live: true },
+    { key: "roughness", label: "Surface roughness", type: "range", min: 0, max: 1, step: 0.01, def: 0.45, live: true },
+    { key: "metalness", label: "Metalness", type: "range", min: 0, max: 1, step: 0.01, def: 0.05, live: true },
+    { key: "clearcoat", label: "Satin sheen", type: "range", min: 0, max: 1, step: 0.01, def: 0.15, live: true },
+    { key: "flatShading", label: "Flat CAD shading", type: "check", def: false, live: true },
+    { key: "wireframe", label: "Wireframe overlay", type: "check", def: false, live: true },
+    { key: "autoRotate", label: "Auto-rotate turntable", type: "check", def: false, live: true },
+    { key: "showGrid", label: "Show build-plate grid", type: "check", def: true, live: true }
+  ] }
+];
+var DEFAULTS = Object.fromEntries(SCHEMA.flatMap((g) => g.params.map((p) => [p.key, p.def])));
+var PRESETS = {
+  "Hex Honeycomb Dovetail": { ...DEFAULTS, baseShape: "hexagon", jointType: "dovetail", polarityMode: "hermaphroditic", stopLedge: true, assemblyMode: "cluster-3" },
+  "Grid Box Organizer (Snap-Fit)": { ...DEFAULTS, baseShape: "box", outerWidth: 75, outerDepth: 75, height: 50, cornerRadius: 5, jointType: "snap-cantilever", polarityMode: "hermaphroditic", hermSpacing: 22, jointDepth: 3.6, snapHookLip: 0.5, snapBeamThick: 1.2, snapSlotGap: 1.6, jointHeightFrac: 0.6, stackableLip: true, filamentPreset: "PETG (Recommended for Snap)", clearance: 0.25, assemblyMode: "grid-2x2" },
+  "Magnetic Desk Cup (Round Collar)": { ...DEFAULTS, baseShape: "circle-collar", polySides: 6, outerWidth: 80, height: 95, jointType: "magnetic", polarityMode: "hermaphroditic", hermSpacing: 14, magDiameter: 6, magThickness: 2, magInsertStyle: "top-drop-slot", magRows: 2, stackableLip: false, innerFillet: 5, assemblyMode: "cluster-3" },
+  "Heavy-Duty Hardware Bin (T-Slot)": { ...DEFAULTS, baseShape: "box", outerWidth: 100, outerDepth: 150, height: 75, cornerRadius: 6, wallThickness: 3, baseThickness: 3, jointType: "t-slot", jointWidth: 9, jointDepth: 3.6, polarityMode: "hermaphroditic", hermSpacing: 24, frontCutout: 0.45, labelLedge: true, stackableLip: false, innerFillet: 6, assemblyMode: "pair-1x2" },
+  "Puzzle Tray Divider (Multi-Compartment)": { ...DEFAULTS, baseShape: "box", outerWidth: 120, outerDepth: 120, height: 30, cornerRadius: 6, jointType: "puzzle", jointWidth: 9, jointDepth: 2.4, polarityMode: "hermaphroditic", hermSpacing: 26, jointHeightFrac: 0.7, jointZOffset: 2, dividersX: 1, dividersY: 1, dividerHeight: 0.8, stackableLip: false, clearance: 0.25, assemblyMode: "grid-2x2" },
+  "Octa-Tessellation Module": { ...DEFAULTS, baseShape: "octagon", outerWidth: 90, height: 55, jointType: "dovetail", polarityMode: "hermaphroditic", activeSides: "all", hermSpacing: 15, jointWidth: 6, jointDepth: 2.8, stackableLip: false, assemblyMode: "pair-1x2" },
+  "Wall Honeycomb Shelf": { ...DEFAULTS, baseShape: "hexagon", outerWidth: 140, height: 120, wallThickness: 3.2, baseThickness: 3.2, cornerRadius: 6, jointType: "dovetail", jointsPerSide: 2, hermSpacing: 18, jointWidth: 8, jointDepth: 3.4, dividersX: 0, dividersY: 0, stackableLip: false, innerFillet: 4, assemblyMode: "cluster-3" }
+};
+
+// src/engine.js
+import * as THREE from "three";
+var TAU = 4e-3;
+var DEG = Math.PI / 180;
+var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+var DENSITY = { "PLA (Stiff)": 1.24, "PETG (Recommended for Snap)": 1.27, "ABS / ASA": 1.04, "TPU (Flex)": 1.21 };
+var STRAIN_LIMIT = { "PLA (Stiff)": 2.2, "PETG (Recommended for Snap)": 4, "ABS / ASA": 3.5, "TPU (Flex)": 25 };
+function offsetProf(prof, rho) {
+  const n = prof.length;
+  if (Math.abs(rho) < 1e-9) return prof.map((p) => p.slice());
+  const nr = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dU = prof[i + 1][0] - prof[i][0], dc = prof[i + 1][1] - prof[i][1];
+    const L = Math.hypot(dU, dc) || 1;
+    nr.push([dc / L, -dU / L]);
+  }
+  const out = [];
+  {
+    const [U0, c0] = prof[0], [nu, nc] = nr[0];
+    const dU = prof[1][0] - U0, dc = prof[1][1] - c0;
+    const t = Math.abs(dc) > 1e-9 ? -(c0 + rho * nc) / dc : 0;
+    out.push([U0 + rho * nu + t * dU, 0]);
+  }
+  const miter = (p, a, b) => {
+    const d = Math.max(1 + a[0] * b[0] + a[1] * b[1], 0.04);
+    return [p[0] + rho * (a[0] + b[0]) / d, p[1] + rho * (a[1] + b[1]) / d];
+  };
+  for (let i = 1; i < n - 1; i++) out.push(miter(prof[i], nr[i - 1], nr[i]));
+  out.push(miter(prof[n - 1], nr[n - 2], [0, 1]));
+  for (let i = 0; i < n; i++) {
+    out[i][0] = Math.max(out[i][0], 0.15);
+    if (i) out[i][1] = Math.max(out[i][1], out[i - 1][1] + 1e-4);
+  }
+  return out;
+}
+function profU(prof, c) {
+  if (c <= prof[0][1]) return prof[0][0];
+  for (let i = 1; i < prof.length; i++) {
+    if (c <= prof[i][1]) {
+      const a = prof[i - 1], b = prof[i];
+      return a[0] + (b[0] - a[0]) * (c - a[1]) / (b[1] - a[1] || 1e-9);
+    }
+  }
+  return prof[prof.length - 1][0];
+}
+var profMaxU = (prof) => prof.reduce((m, p) => Math.max(m, p[0]), 0);
+var profDepth = (prof) => prof[prof.length - 1][1];
+function deepen(prof, e) {
+  const n = prof.length, a = prof[n - 2], b = prof[n - 1];
+  const k = (b[0] - a[0]) / (b[1] - a[1] || 1e-9);
+  b[0] = Math.max(0.15, b[0] + k * e);
+  b[1] += e;
+}
+function nominalProfile(P2, type) {
+  const jw = P2.jointWidth, jd = P2.jointDepth;
+  if (type === "dovetail") {
+    const a = clamp(P2.dovetailAngle, 15, 60) * DEG;
+    return [[jw / 2, 0], [jw / 2 + jd / Math.tan(a), jd]];
+  }
+  if (type === "t-slot") {
+    const nh = 0.25 * jw;
+    const d1 = 0.3 * jd;
+    const ch = Math.min(0.25 * jw, 0.45 * jd);
+    return [[nh, 0], [nh, d1], [nh + ch, d1 + ch], [nh + ch, jd]];
+  }
+  if (type === "puzzle") {
+    const R = 0.425 * jw, nh = Math.min(0.25 * jw, 0.8 * R);
+    const ls = Math.max(0.6, 0.35 * jd);
+    const cc = ls + Math.sqrt(R * R - nh * nh);
+    const t0 = Math.asin(nh / R), t1 = Math.acos(-0.93);
+    const pr = [[nh, 0]];
+    const m = 14;
+    for (let i = 0; i <= m; i++) {
+      const t = t0 + (t1 - t0) * i / m;
+      pr.push([R * Math.sin(t), cc - R * Math.cos(t)]);
+    }
+    return pr;
+  }
+  return null;
+}
+function snapEnvelope(P2, warn) {
+  const g = P2.snapSlotGap, t = P2.snapBeamThick, L = P2.jointDepth;
+  let h = P2.snapHookLip;
+  const hookLen = h * (1 + 1 / Math.tan(30 * DEG));
+  if (hookLen > 0.75 * L) {
+    h = 0.75 * L / (1 + 1 / Math.tan(30 * DEG));
+    warn.push(`Hook lip limited to ${h.toFixed(2)} mm by protrusion depth.`);
+  }
+  const c1 = L - h * (1 + 1 / Math.tan(30 * DEG));
+  const U0 = g / 2 + t;
+  return { prof: [[U0, 0], [U0, c1], [U0 + h, c1 + h], [U0, L]], h, g, t, L };
+}
+function monoPts(sl, y, r, out) {
+  const prof = sl.prof, n = prof.length, sig = sl.sigma;
+  const ex = sl.ex ? sl.ex(y) : 0;
+  const Dorig = profDepth(prof), Dfull = Dorig + ex;
+  let zt = Math.min(sl.z(y), Dfull);
+  const clip = sl.through && sig < 0;
+  const cMin = clip ? r : 0;
+  const need = cMin + (sig < 0 ? 2 * n + 8 : n + 1) * TAU;
+  const fade = clip ? clamp((Dfull - r) / 0.25 + 0.3, 0.3, 1) : 1;
+  if (zt < need) zt = need;
+  const cs = new Array(n);
+  for (let i = 0; i < n; i++) {
+    let c = i === n - 1 ? Dfull : prof[i][1];
+    c = clamp(c, cMin + i * TAU, zt - (n - 1 - i) * TAU);
+    if (i) c = Math.max(c, cs[i - 1] + TAU * 0.5);
+    cs[i] = c;
+  }
+  const shift = clip ? 0 : -r;
+  const start = out.length;
+  for (let i = 0; i < n; i++) {
+    const u = (profU(prof, Math.min(cs[i], Dorig)) + ex) * fade;
+    out.push([-u, sig * cs[i] + shift]);
+  }
+  for (let i = n - 1; i >= 0; i--) out.push([-out[start + i][0], out[start + i][1]]);
+  return cs[n - 1] + (clip ? 0 : r);
+}
+function snapMalePts(sl, y, r, out) {
+  const prof = sl.prof, n = prof.length, L = profDepth(prof);
+  const zt = clamp(sl.z(y), (n + 3) * TAU, L);
+  const cs = new Array(n);
+  for (let i = 0; i < n; i++) {
+    let c = clamp(prof[i][1], i * TAU, zt - (n - 1 - i) * TAU);
+    if (i) c = Math.max(c, cs[i - 1] + TAU * 0.5);
+    cs[i] = c;
+  }
+  const g2 = sl.g / 2;
+  let nSlot;
+  if (sl.nSlot < 0) nSlot = Math.min(-TAU, sl.nSlot * Math.min(1, zt / L));
+  else nSlot = Math.min(zt - 2 * TAU, Math.max(TAU, sl.nSlot * Math.min(1, zt / L)));
+  for (let i = 0; i < n; i++) out.push([-profU(prof, cs[i]), cs[i] - r]);
+  out.push([-g2, cs[n - 1] - r]);
+  out.push([-g2, nSlot - r]);
+  out.push([g2, nSlot - r]);
+  out.push([g2, cs[n - 1] - r]);
+  for (let i = n - 1; i >= 0; i--) out.push([profU(prof, cs[i]), cs[i] - r]);
+  return { depth: Math.max(0, -nSlot) + r };
+}
+function slotPoints(sl, y, r, out) {
+  if (sl.kind === "mono") return monoPts(sl, y, r, out);
+  if (sl.kind === "snapM") return snapMalePts(sl, y, r, out);
+  return 0;
+}
+function slotReq(sl, y, r) {
+  if (sl.kind === "mono") {
+    if (sl.sigma > 0) return null;
+    const tmp = [];
+    const depth = monoPts(sl, y, r, tmp);
+    let half = 0;
+    for (const p of tmp) half = Math.max(half, Math.abs(p[0]));
+    return { depth, half, skin: sl.skin };
+  }
+  if (sl.kind === "snapM") {
+    const tmp = [];
+    const d = snapMalePts(sl, y, r, tmp);
+    return { depth: d.depth, half: sl.g / 2 + 0.2, skin: sl.skin };
+  }
+  if (sl.kind === "void") return { depth: sl.voidDepth, half: sl.voidHalf, skin: sl.skin, fixed: true };
+  return null;
+}
+function makeCtx(P2, warn) {
+  const C = { P: P2, warn };
+  const H = C.H = P2.height;
+  C.d = P2.clearance;
+  C.zc = P2.zClearance;
+  C.tanT = Math.tan(clamp(P2.overhangAngle, 35, 60) * DEG);
+  const shape = C.shape = P2.baseShape;
+  const Wd = P2.outerWidth, Dp = P2.outerDepth;
+  let N, apo = null, psi0 = 0, collar = false;
+  if (shape === "box") {
+    N = 4;
+    apo = [Wd / 2, Dp / 2, Wd / 2, Dp / 2];
+  } else if (shape === "hexagon") N = 6;
+  else if (shape === "octagon") N = 8;
+  else if (shape === "triangle") {
+    N = 3;
+    psi0 = -Math.PI / 2;
+  } else if (shape === "multigon") {
+    N = clamp(Math.round(P2.polySides), 3, 12);
+    psi0 = N % 2 ? -Math.PI / 2 : 0;
+  } else {
+    collar = true;
+    N = Math.round(P2.polySides) === 4 ? 4 : 6;
+  }
+  if (!apo) apo = new Array(N).fill(Wd / 2);
+  C.N = N;
+  C.apo = apo;
+  C.collar = collar;
+  C.nrm = [];
+  C.tan = [];
+  for (let k = 0; k < N; k++) {
+    const a = psi0 + k * 2 * Math.PI / N;
+    const n = [Math.cos(a), Math.sin(a)];
+    C.nrm.push(n);
+    C.tan.push([-n[1], n[0]]);
+  }
+  let front = 0;
+  for (let k = 1; k < N; k++) if (C.nrm[k][1] > C.nrm[front][1] + 1e-9) front = k;
+  C.front = front;
+  const minApo = Math.min(...apo);
+  C.w = Math.min(P2.wallThickness, 0.22 * minApo);
+  if (C.w < P2.wallThickness - 1e-6) warn.push(`Wall thickness limited to ${C.w.toFixed(2)} mm for this footprint.`);
+  C.bt = Math.min(P2.baseThickness, 0.4 * H);
+  C.rc = collar ? 0 : clamp(P2.cornerRadius, 0.5, 0.42 * minApo);
+  C.rIn = Math.max(C.rc - C.w, 0.6);
+  C.cs = collar ? clamp(Math.round(P2.curveSegs / N), 4, 40) : clamp(Math.round(P2.curveSegs / N), 3, 24);
+  C.cel = clamp(P2.elephantChamfer, 0, Math.min(3, 0.2 * H));
+  return C;
+}
+function frameLevel(C, ins, inner) {
+  const N = C.N, F = { a: [], foot: [], s0: new Array(N), s1: new Array(N), corner: [] };
+  for (let k = 0; k < N; k++) {
+    const a = C.apo[k] - ins[k];
+    F.a.push(a);
+    F.foot.push([a * C.nrm[k][0], a * C.nrm[k][1]]);
+  }
+  for (let k = 0; k < N; k++) {
+    const k1 = (k + 1) % N, n0 = C.nrm[k], n1 = C.nrm[k1], t0 = C.tan[k], t1 = C.tan[k1];
+    const pts = [];
+    let T1, T2;
+    if (!C.collar) {
+      const rho = Math.max(C.rc - Math.min(ins[k], ins[k1]), 0.6);
+      const det = n0[0] * n1[1] - n0[1] * n1[0];
+      const b0 = F.a[k] - rho, b1 = F.a[k1] - rho;
+      const cx = (b0 * n1[1] - b1 * n0[1]) / det, cz = (n0[0] * b1 - n1[0] * b0) / det;
+      let th1 = Math.atan2(n0[1], n0[0]), th2 = Math.atan2(n1[1], n1[0]);
+      while (th2 <= th1) th2 += 2 * Math.PI;
+      for (let i = 0; i <= C.cs; i++) {
+        const th = th1 + (th2 - th1) * i / C.cs;
+        pts.push([cx + rho * Math.cos(th), cz + rho * Math.sin(th)]);
+      }
+    } else {
+      const rk = C.Rarc - ins[k], rk1 = C.Rarc - ins[k1], rr = Math.max(rk, rk1);
+      const tp = Math.tan(Math.PI / N);
+      const hk = Math.min(Math.sqrt(Math.max(rk * rk - F.a[k] * F.a[k], 0.01)), F.a[k] * tp - 0.06);
+      const hk1 = Math.min(Math.sqrt(Math.max(rk1 * rk1 - F.a[k1] * F.a[k1], 0.01)), F.a[k1] * tp - 0.06);
+      T1 = [F.foot[k][0] + hk * t0[0], F.foot[k][1] + hk * t0[1]];
+      T2 = [F.foot[k1][0] - hk1 * t1[0], F.foot[k1][1] - hk1 * t1[1]];
+      let th1 = Math.atan2(T1[1], T1[0]), th2 = Math.atan2(T2[1], T2[0]);
+      while (th2 <= th1) th2 += 2 * Math.PI;
+      const r1 = Math.hypot(T1[0], T1[1]), r2 = Math.hypot(T2[0], T2[1]);
+      for (let i = 0; i <= C.cs; i++) {
+        const f = i / C.cs, th = th1 + (th2 - th1) * f, rad = r1 + (r2 - r1) * f;
+        pts.push([rad * Math.cos(th), rad * Math.sin(th)]);
+      }
+      pts[0] = T1;
+      pts[C.cs] = T2;
+    }
+    const p0 = pts[0], p1 = pts[pts.length - 1];
+    F.s1[k] = (p0[0] - F.foot[k][0]) * t0[0] + (p0[1] - F.foot[k][1]) * t0[1];
+    F.s0[k1] = (p1[0] - F.foot[k1][0]) * t1[0] + (p1[1] - F.foot[k1][1]) * t1[1];
+    F.corner.push(pts);
+  }
+  return F;
+}
+function buildSlots(C) {
+  const P2 = C.P, warn = C.warn, N = C.N, d = C.d, tanT = C.tanT, H = C.H;
+  const jt = P2.jointType;
+  C.sides = Array.from({ length: N }, () => []);
+  C.voids = [];
+  C.polarity = P2.polarityMode;
+  C.magnetic = jt === "magnetic";
+  C.cut = P2.frontCutout > 1e-3;
+  if (C.collar) {
+    const R = C.apo[0], hwMax = R * Math.tan(Math.PI / N) * 0.9;
+    C.hw = Math.min((P2.hermSpacing + 2 * P2.jointWidth) / 2, hwMax);
+    C.Rarc = Math.sqrt(R * R + C.hw * C.hw);
+  }
+  C.active = new Array(N).fill(false);
+  if (jt === "none") return;
+  const act = new Array(N).fill(false);
+  const m = P2.activeSides;
+  for (let k = 0; k < N; k++) {
+    if (m === "all") act[k] = true;
+    else if (m === "opposite-2") act[k] = k === 0 || k === Math.floor(N / 2);
+    else if (m === "adjacent-2") act[k] = k === 0 || k === 1;
+    else if (m === "front-only") act[k] = k === C.front;
+    else if (m === "custom-step") act[k] = k % 2 === 0;
+  }
+  if (C.cut && act[C.front]) {
+    act[C.front] = false;
+    warn.push("Front scoop cutout active: joints on the front wall are omitted.");
+  }
+  C.active = act;
+  let pol = P2.polarityMode;
+  if (pol === "alternating" && N % 2) {
+    pol = "hermaphroditic";
+    warn.push("Alternating polarity needs an even side count \u2014 using hermaphroditic.");
+  }
+  if (pol === "all-female-clip" && jt === "magnetic") {
+    pol = "hermaphroditic";
+    warn.push("Magnetic joints need no clip \u2014 using hermaphroditic magnet polarity.");
+  }
+  C.polarity = pol;
+  if (pol === "alternating") {
+    let added = false;
+    for (let k = 0; k < N / 2; k++) if (act[k] !== act[k + N / 2]) {
+      act[k] = act[k + N / 2] = true;
+      added = true;
+    }
+    if (C.cut && act[C.front]) {
+      const o = (C.front + N / 2) % N;
+      act[C.front] = false;
+      act[o] = false;
+    }
+    if (added) warn.push("Alternating polarity: opposite walls activated in pairs so male meets female.");
+  }
+  const sliding = jt === "dovetail" || jt === "t-slot" || jt === "puzzle";
+  C.sliding = sliding;
+  const span = clamp(P2.jointHeightFrac, 0.2, 1) * H;
+  C.yJ0 = Math.min(Math.max(P2.jointZOffset, C.yB + 0.4), H - 6);
+  if (C.yJ0 < C.yB + 0.4) {
+    warn.push("Unit too short for joints above the base chamfer/stacking zone \u2014 joints omitted.");
+    C.yJ0 = void 0;
+    return;
+  }
+  if (P2.jointZOffset > C.yJ0 + 1e-6) warn.push(`Joint start lowered to ${C.yJ0.toFixed(1)} mm to fit the height.`);
+  C.yJ1 = Math.min(C.yJ0 + span, H);
+  if (jt === "snap-cantilever") C.yJ1 = Math.min(C.yJ1, H - 1.2 - C.zc - P2.jointDepth * tanT);
+  if (C.yJ1 - C.yJ0 < 4) {
+    C.yJ1 = Math.min(H, C.yJ0 + 4);
+    warn.push("Joint span very short \u2014 increase height or joint span.");
+  }
+  const yJ0 = C.yJ0, yJ1 = C.yJ1;
+  let Pj = P2;
+  {
+    const jw = P2.jointWidth, jd = P2.jointDepth;
+    let est = 0;
+    if (jt === "puzzle") {
+      const R = 0.425 * jw, nh = Math.min(0.25 * jw, 0.8 * R);
+      est = Math.max(0.6, 0.35 * jd) + Math.sqrt(R * R - nh * nh) + 0.93 * R;
+    } else if (jt !== "magnetic") est = jd;
+    const lead = sliding ? P2.leadInChamfer / tanT : 0;
+    const room = 0.3 * Math.min(...C.apo) - C.w - lead - C.d;
+    if (est > 0 && est > room) {
+      const f = Math.max(0.15, room / est);
+      Pj = { ...P2, jointDepth: jd * f, jointWidth: Math.max(3, jw * f), snapHookLip: P2.snapHookLip * f, snapBeamThick: Math.max(0.6, P2.snapBeamThick * Math.sqrt(f)), snapSlotGap: Math.max(0.6, P2.snapSlotGap * Math.sqrt(f)) };
+      warn.push(`Joint scaled to ${(f * 100).toFixed(0)}% so its socket and internal boss fit this footprint.`);
+    }
+    if (jt === "magnetic") {
+      const tl = P2.magThickness + 2 * P2.magWallSkin + C.d;
+      if (tl > 0.3 * Math.min(...C.apo)) {
+        warn.push("Magnet too thick for this footprint \u2014 magnets omitted.");
+        return;
+      }
+    }
+  }
+  C.Pj = Pj;
+  let male = null, female = null, footM = 0, footF = 0, magCfg = null;
+  const leadIn = P2.leadInChamfer;
+  const relief = P2.cornerRelief ? 0.15 : 0;
+  if (sliding) {
+    const nom = nominalProfile(Pj, jt);
+    const pm = offsetProf(nom, -d / 2), pf = offsetProf(nom, d / 2);
+    if (relief) deepen(pf, relief);
+    const DM = profDepth(pm), DF = profDepth(pf);
+    male = { kind: "mono", sigma: 1, prof: pm, tag: 1, z: (y) => Math.min(DM, (y - yJ0) / tanT, (yJ1 - y) / tanT) };
+    const throughF = pol === "hermaphroditic" || !P2.stopLedge;
+    const lead = (y) => leadIn > 0 && y > H - leadIn ? (y - (H - leadIn)) / tanT * 0.999 : 0;
+    female = {
+      kind: "mono",
+      sigma: -1,
+      prof: pf,
+      tag: 2,
+      through: throughF,
+      skin: C.w,
+      ex: lead,
+      z: throughF ? () => DF + 10 : (y) => (y - (yJ0 - C.zc)) / tanT
+    };
+    footM = profMaxU(pm);
+    footF = profMaxU(pf) + leadIn / tanT;
+    C.DM = DM;
+    C.DF = DF;
+  } else if (jt === "snap-cantilever") {
+    const env = snapEnvelope(Pj, warn);
+    const pm = offsetProf(env.prof, -d / 2), pf = offsetProf(env.prof, d / 2);
+    if (relief) deepen(pf, relief);
+    const DM = profDepth(pm), DF = profDepth(pf);
+    const nSlot = -Math.min(0.6 * C.w, 1.6);
+    male = {
+      kind: "snapM",
+      prof: pm,
+      g: env.g,
+      nSlot,
+      tag: 1,
+      skin: C.w,
+      z: (y) => Math.min(DM, (y - yJ0) / tanT, (yJ1 - y) / tanT)
+    };
+    female = {
+      kind: "mono",
+      sigma: -1,
+      prof: pf,
+      tag: 2,
+      through: false,
+      skin: C.w,
+      z: (y) => Math.min(DF, (y - (yJ0 - C.zc)) / tanT, (yJ1 + C.zc - y) / tanT)
+    };
+    footM = profMaxU(pm);
+    footF = profMaxU(pf);
+    C.DM = DM;
+    C.DF = DF;
+    C.snap = { ...env, Lbeam: env.L + Math.abs(nSlot) };
+    if (env.g < 2 * env.h - 0.05) warn.push(`Flex relief slot (${env.g.toFixed(1)} mm) is narrower than 2\xD7 hook lip \u2014 beams cannot fully deflect.`);
+  } else if (jt === "magnetic") {
+    const Dm = P2.magDiameter + d, Tm = P2.magThickness + d, skin = P2.magWallSkin;
+    const rows = clamp(Math.round(P2.magRows), 1, 3);
+    const style = P2.magInsertStyle;
+    const ph = Dm;
+    const yRows = [];
+    if (style === "top-drop-slot") {
+      const y0 = Math.max(yJ0, C.yB + 1.5);
+      for (let r = 0; r < rows; r++) yRows.push([y0 + r * ph, y0 + (r + 1) * ph]);
+      if (yRows[rows - 1][1] + 1.5 > H) warn.push("Magnet stack taller than the wall.");
+    } else {
+      const lo = yJ0, hi = yJ1 - (style === "press-fit-side" ? Tm * tanT : Dm / 2 * tanT) - 0.5;
+      const pitch = (hi - lo) / rows;
+      for (let r = 0; r < rows; r++) {
+        const c = lo + pitch * (r + 0.5);
+        yRows.push([c - ph / 2, c + ph / 2]);
+      }
+      if (pitch < ph + 1) warn.push("Magnet rows overlap \u2014 reduce rows or magnet diameter.");
+    }
+    magCfg = { Dm, Tm, skin, rows, style, yRows };
+    C.mag = magCfg;
+    if (style === "press-fit-side") {
+      const prof = [[Dm / 2, 0], [Dm / 2, Tm]];
+      const z = (y) => {
+        let z2 = 0;
+        for (const [a, b] of yRows) {
+          if (y < a || y > b + Tm * tanT) continue;
+          let v = Tm;
+          if (y < a + 0.05) v = Tm * (y - a) / 0.05;
+          if (y > b) v = Math.min(v, Tm - (y - b) / tanT);
+          z2 = Math.max(z2, v);
+        }
+        return z2;
+      };
+      male = { kind: "mono", sigma: -1, prof, tag: 3, through: false, skin, z };
+      female = { kind: "mono", sigma: -1, prof, tag: 4, through: false, skin, z };
+    } else {
+      male = { kind: "void", tag: 3, skin, voidDepth: skin + Tm, voidHalf: Dm / 2 };
+      female = { kind: "void", tag: 4, skin, voidDepth: skin + Tm, voidHalf: Dm / 2 };
+    }
+    footM = footF = Dm / 2 + 0.6;
+  }
+  C.footM = footM;
+  C.footF = footF;
+  const hsUser = P2.hermSpacing;
+  const nUser = clamp(Math.round(P2.jointsPerSide), 1, 4);
+  const layout = (k, n) => {
+    const list = [];
+    if (pol === "hermaphroditic") {
+      const hs = Math.max(hsUser, footM + footF + 0.6);
+      for (let i = 0; i < 2 * n; i++) list.push({ s: (i - (2 * n - 1) / 2) * hs, male: i % 2 === 0, idx: i });
+    } else {
+      const isMale = pol === "alternating" ? k < N / 2 : false;
+      const f = pol === "alternating" ? Math.max(footM, footF) : footF;
+      const hs = Math.max(hsUser, 2 * f + 0.6);
+      for (let i = 0; i < n; i++) list.push({ s: (i - (n - 1) / 2) * hs, male: isMale, idx: i });
+    }
+    return list;
+  };
+  if (C.collar) {
+    const R = C.apo[0];
+    const lay = layout(0, nUser);
+    let need = 0;
+    for (const it of lay) need = Math.max(need, Math.abs(it.s) + (it.male ? footM : footF) + 1.2);
+    const hwMax = R * Math.tan(Math.PI / N) * 0.9;
+    let hw = Math.max((P2.hermSpacing + 2 * P2.jointWidth) / 2, need);
+    if (hw > hwMax) hw = hwMax;
+    C.hw = hw;
+    C.Rarc = Math.sqrt(R * R + hw * hw);
+  }
+  const F0 = frameLevel(C, new Array(N).fill(0), false);
+  let reduced = false, dropped = 0;
+  for (let k = 0; k < N; k++) {
+    if (!act[k]) continue;
+    let placed = null;
+    for (let n = nUser; n >= 1 && !placed; n--) {
+      const lay = layout(k, n);
+      const lo = F0.s0[k] + 0.6, hi = F0.s1[k] - 0.6;
+      let ok = true, prevHi = -Infinity;
+      for (const it of lay) {
+        const f = pol === "alternating" ? Math.max(footM, footF) : it.male ? footM : footF;
+        if (it.s - f < lo || it.s + f > hi || it.s - f < prevHi + 0.4) {
+          ok = false;
+          break;
+        }
+        prevHi = it.s + f;
+      }
+      if (ok) {
+        placed = lay;
+        if (n < nUser) reduced = true;
+      }
+    }
+    if (!placed) {
+      dropped++;
+      continue;
+    }
+    for (const it of placed) {
+      let def = it.male ? male : female;
+      const slot = { ...def, s: it.s, isMale: it.male, side: k, idx: it.idx };
+      if (jt === "magnetic") {
+        let north = it.male;
+        if (pol === "hermaphroditic" && P2.hermSplit === "top-bottom") slot.checker = true;
+        slot.north = north;
+        slot.tag = north ? 3 : 4;
+      }
+      C.sides[k].push(slot);
+    }
+  }
+  if (reduced) warn.push("Connectors per wall reduced to fit the flat wall length.");
+  if (dropped) warn.push(`${dropped} wall(s) too short for the selected connector \u2014 joints omitted there.`);
+  if (pol === "hermaphroditic" && P2.hermSplit === "top-bottom" && jt !== "magnetic")
+    warn.push("Top-bottom split cannot self-mate for sliding/snap joints \u2014 side-by-side layout used.");
+  if (pol === "all-female-clip" && jt !== "magnetic") C.clipDef = { male, jt };
+  if (hsUser < footM + footF + 0.6 && pol === "hermaphroditic") warn.push(`Pair offset widened to ${(footM + footF + 0.6).toFixed(1)} mm so male and female do not overlap.`);
+  if (magCfg && magCfg.style !== "press-fit-side") {
+    for (let k = 0; k < N; k++) for (const sl of C.sides[k]) {
+      const base = { side: k, s: sl.s, d0: magCfg.skin, d1: magCfg.skin + magCfg.Tm, north: sl.north };
+      if (magCfg.style === "top-drop-slot") {
+        const y0 = magCfg.yRows[0][0], ys = magCfg.yRows[magCfg.yRows.length - 1][1];
+        C.voids.push({ ...base, y0, y1: H, open: true, half: (y) => {
+          const h = magCfg.Dm / 2;
+          if (y < ys) return h;
+          const q = y - ys;
+          if (q < 0.25) return h - q;
+          if (q < 0.55) return h - 0.25;
+          if (q < 0.8) return h - 0.25 + (q - 0.55);
+          return h;
+        }, halfN: () => magCfg.Tm / 2, breaks: [ys, ys + 0.25, ys + 0.55, ys + 0.8] });
+      } else {
+        for (const [a, b] of magCfg.yRows) {
+          const hu = magCfg.Dm / 2, hn = magCfg.Tm / 2;
+          const roof = (hu - 0.25) * tanT;
+          C.voids.push({
+            ...base,
+            y0: a,
+            y1: b + roof,
+            open: false,
+            half: (y) => y <= b ? hu : Math.max(0.25, hu - (y - b) / tanT),
+            halfN: (y) => y <= b ? hn : Math.max(0.15, hn - (y - b) / tanT),
+            breaks: [b, b + (hn - 0.15) * tanT]
+          });
+        }
+      }
+    }
+  }
+}
+function setupVertical(C) {
+  const P2 = C.P, H = C.H, N = C.N, tanT = C.tanT, w = C.w, d = C.d;
+  C.stack = !!P2.stackableLip;
+  C.hl = clamp(P2.stackLipHeight, 1.5, Math.min(8, 0.2 * H));
+  C.yB = C.cel;
+  C.I = new Array(N).fill(0);
+  C.Tst = 0;
+  C.bossSide = new Array(N).fill(false);
+}
+function finishVertical(C) {
+  const P2 = C.P, H = C.H, N = C.N, tanT = C.tanT, w = C.w, d = C.d, warn = C.warn;
+  C.ww = w / 2 + d / 2;
+  if (C.stack) {
+    const ys = [];
+    for (let i = 0; i <= 8; i++) ys.push(H - (C.hl + 1.5) * i / 8);
+    for (let k = 0; k < N; k++) {
+      let face = 0;
+      for (const sl of C.sides[k]) for (const y of ys) {
+        const q = slotReq(sl, y, 0);
+        if (q && q.depth > 0.02) face = Math.max(face, q.depth + q.skin * clamp(q.depth / 0.3, 0, 1));
+      }
+      if (C.cut && k === C.front) face = Math.max(face, w);
+      C.bossSide[k] = face > 0;
+      C.I[k] = face > 0 ? Math.max(face, w) + d : w / 2 + d / 2;
+    }
+    const Imax = Math.max(...C.I);
+    if (Imax + w > 0.55 * Math.min(...C.apo)) {
+      C.stack = false;
+      warn.push("Footprint too small for the stacking plug with these joints \u2014 stacking rim disabled.");
+    } else {
+      C.Tst = Imax * tanT;
+      C.yW0 = H - C.hl - C.zc - C.ww * tanT;
+      if (C.yW0 < C.hl + C.Tst + C.bt + 2) {
+        C.stack = false;
+        warn.push("Height too small for stacking rim \u2014 disabled.");
+      }
+    }
+  }
+  if (!C.stack) {
+    C.I.fill(0);
+    C.Tst = 0;
+    C.bossSide.fill(true);
+  }
+  C.rf = clamp(P2.innerFillet, 0, Math.min(0.35 * (H - C.bt), 0.25 * Math.min(...C.apo)));
+  if (C.cut) {
+    const minYc = Math.max(C.bt + C.rf, C.stack ? C.hl + C.Tst : C.cel) + 2;
+    C.yc = Math.max(H - P2.frontCutout * H, minYc);
+    if (C.yc > H - 1) C.cut = false;
+  }
+}
+function outerIns(C, y, out) {
+  const el = Math.max(0, C.cel - y);
+  for (let k = 0; k < C.N; k++) {
+    let st = 0;
+    if (C.stack) st = y <= C.hl ? C.I[k] : C.I[k] * Math.max(0, 1 - (y - C.hl) / C.Tst);
+    out[k] = Math.max(el, st);
+  }
+  return out;
+}
+function widen(C, k, y) {
+  if (!C.stack || C.bossSide[k]) return 0;
+  return C.ww * clamp((y - C.yW0) / (C.ww * C.tanT), 0, 1);
+}
+function scoop(C, y) {
+  const rf = C.rf;
+  if (rf <= 0) return 0;
+  const q = C.bt + rf - y;
+  if (q <= 0) return 0;
+  return rf - Math.sqrt(Math.max(rf * rf - q * q, 0));
+}
+function cutTop(C, s, halfFlat) {
+  const b = halfFlat * 0.92, x = Math.abs(s) / b;
+  let f = 0;
+  if (x <= 0.55) f = 1;
+  else if (x < 1) f = 0.5 * (1 + Math.cos(Math.PI * (x - 0.55) / 0.45));
+  return C.H - (C.H - C.yc) * f;
+}
+var FRONT_SAMPLES = 40;
+function outerLoop(C, y) {
+  const N = C.N, ins = outerIns(C, y, new Array(N));
+  const F = frameLevel(C, ins, false);
+  const xz = [], tag = [], fs = [], mark = [];
+  const tmp = [];
+  for (let k = 0; k < N; k++) {
+    const n = C.nrm[k], t = C.tan[k], a0 = C.apo[k];
+    const ox = a0 * n[0], oz = a0 * n[1];
+    const fa = F.s0[k] + 0.1, fb = F.s1[k] - 0.1;
+    for (const sl of C.sides[k]) {
+      tmp.length = 0;
+      slotPoints(sl, y, ins[k], tmp);
+      for (let i = 0; i < tmp.length; i++) {
+        const [u, nn] = tmp[i], s = clamp(sl.s + u, fa, fb);
+        xz.push(ox + s * t[0] + nn * n[0], oz + s * t[1] + nn * n[1]);
+        tag.push(i < tmp.length - 1 ? sl.tag : 0);
+        fs.push(NaN);
+        mark.push(i > 0 && i < tmp.length - 1 ? 1 : 0);
+      }
+    }
+    if (C.cut && k === C.front) {
+      const s0 = F.s0[k], s1 = F.s1[k], half = Math.min(-s0, s1);
+      for (let i = 1; i < FRONT_SAMPLES; i++) {
+        const s = s0 + (s1 - s0) * i / FRONT_SAMPLES;
+        xz.push(F.foot[k][0] + s * t[0], F.foot[k][1] + s * t[1]);
+        tag.push(0);
+        fs.push(cutTop(C, s, half));
+        mark.push(0);
+      }
+    }
+    for (const p of F.corner[k]) {
+      xz.push(p[0], p[1]);
+      tag.push(0);
+      fs.push(NaN);
+      mark.push(0);
+    }
+  }
+  return { xz, tag, fs, mark };
+}
+function innerLoop(C, y) {
+  const N = C.N, insO = outerIns(C, y, new Array(N)), insI = new Array(N);
+  const sc = scoop(C, y);
+  for (let k = 0; k < N; k++) insI[k] = insO[k] + C.w - widen(C, k, y) + sc;
+  const F = frameLevel(C, insI, true);
+  const xz = [], fs = [];
+  for (let k = 0; k < N; k++) {
+    const n = C.nrm[k], t = C.tan[k], a0 = C.apo[k];
+    const ox = a0 * n[0], oz = a0 * n[1];
+    const sl = C.sides[k];
+    const fa = F.s0[k] + 0.25, fb = F.s1[k] - 0.25;
+    const bnd = [fa];
+    const needs = sl.map((q) => slotReq(q, y, insO[k]) !== null);
+    for (let j = 1; j < sl.length; j++) {
+      let b = (sl[j - 1].s + sl[j].s) / 2;
+      if (!needs[j - 1] && needs[j]) b = sl[j - 1].s + 8 * TAU;
+      else if (needs[j - 1] && !needs[j]) b = sl[j].s - 8 * TAU;
+      bnd.push(clamp(b, fa, fb));
+    }
+    bnd.push(fb);
+    for (let j = 1; j < bnd.length; j++) bnd[j] = Math.max(bnd[j], bnd[j - 1]);
+    for (let j = 0; j < sl.length; j++) {
+      const s = sl[j], lo = bnd[j] - s.s + (j > 0 ? 3 * TAU : 0), hi = bnd[j + 1] - s.s - (j < sl.length - 1 ? 3 * TAU : 0);
+      const wallD = insI[k];
+      const q = slotReq(s, y, insO[k]);
+      let A, B, Cc, D, nF = -wallD - TAU;
+      if (q) {
+        const sk = q.skin * clamp(q.depth / 0.3, 0, 1);
+        const faceD = q.depth + sk;
+        const h = faceD - wallD;
+        const face = q.half + sk, mouth = face + Math.max(h, 0);
+        A = Math.max(-mouth, lo);
+        D = Math.min(mouth, hi);
+        nF = -wallD - Math.max(h, TAU);
+        const fd = C.apo[k] + nF;
+        let fl = -face, fr = face, free = false;
+        if (C.collar) {
+          const rr = C.Rarc - insI[k] - 0.3, lim = Math.sqrt(Math.max(0, rr * rr - fd * fd));
+          fl = Math.max(fl, -lim - s.s);
+          fr = Math.min(fr, lim - s.s);
+          free = true;
+        } else {
+          const rho = Math.max(C.rc - insI[k], 0.6);
+          if (-nF - wallD > rho) {
+            free = true;
+            const kp = (k + N - 1) % N, kn = (k + 1) % N;
+            const lim = (kk) => {
+              const nn = C.nrm[kk], A1 = C.apo[kk] - insI[kk] - 0.3;
+              const tn = t[0] * nn[0] + t[1] * nn[1], nd = n[0] * nn[0] + n[1] * nn[1];
+              return Math.abs(tn) < 1e-9 ? null : (A1 - fd * nd) / tn - s.s;
+            };
+            const lp = lim(kp), ln = lim(kn);
+            if (lp !== null) fl = Math.max(fl, lp);
+            if (ln !== null) fr = Math.min(fr, ln);
+          }
+        }
+        const freeL = free && j === 0 && (!C.stack || C.bossSide[(k + N - 1) % N]);
+        const freeR = free && j === sl.length - 1 && (!C.stack || C.bossSide[(k + 1) % N]);
+        B = freeL ? fl : Math.max(fl, A + TAU);
+        Cc = freeR ? fr : Math.min(fr, D - TAU);
+        if (Math.abs(B - A) < TAU) B = A + TAU;
+        if (Math.abs(Cc - D) < TAU) Cc = D - TAU;
+      } else {
+        const c = clamp(0, lo + 2 * TAU, hi - 2 * TAU);
+        A = c - 1.5 * TAU;
+        B = c - 0.5 * TAU;
+        Cc = c + 0.5 * TAU;
+        D = c + 1.5 * TAU;
+      }
+      if (!(A < D && B < Cc)) {
+        const c = clamp((lo + hi) / 2, lo, hi);
+        A = c - 1.5 * TAU;
+        B = c - 0.5 * TAU;
+        Cc = c + 0.5 * TAU;
+        D = c + 1.5 * TAU;
+        nF = -wallD - TAU;
+      }
+      for (const [u, nn] of [[A, -wallD], [B, nF], [Cc, nF], [D, -wallD]]) {
+        const ss = s.s + u;
+        xz.push(ox + ss * t[0] + nn * n[0], oz + ss * t[1] + nn * n[1]);
+        fs.push(NaN);
+      }
+    }
+    if (C.cut && k === C.front) {
+      const s0 = F.s0[k], s1 = F.s1[k];
+      const Fo = frameLevel(C, new Array(N).fill(0), false);
+      const half = Math.min(-Fo.s0[k], Fo.s1[k]);
+      for (let i = 1; i < FRONT_SAMPLES; i++) {
+        const s = s0 + (s1 - s0) * i / FRONT_SAMPLES;
+        xz.push(F.foot[k][0] + s * t[0], F.foot[k][1] + s * t[1]);
+        fs.push(cutTop(C, s, half));
+      }
+    }
+    for (const p of F.corner[k]) {
+      xz.push(p[0], p[1]);
+      fs.push(NaN);
+    }
+  }
+  return { xz, fs };
+}
+function levels(C, from) {
+  const P2 = C.P, H = C.H, tanT = C.tanT;
+  const br = [0, H, C.cel, C.bt];
+  if (C.stack) br.push(C.hl, C.hl + C.Tst, C.yW0, C.yW0 + C.ww * tanT);
+  if (C.yJ0 !== void 0) {
+    const DM = C.DM || 0, DF = C.DF || 0;
+    br.push(C.yJ0, C.yJ0 + DM * tanT, C.yJ1 - DM * tanT, C.yJ1, C.yJ0 - C.zc, C.yJ0 - C.zc + DF * tanT, C.yJ1 + C.zc - DF * tanT, C.yJ1 + C.zc);
+    if (P2.leadInChamfer > 0) br.push(H - P2.leadInChamfer);
+  }
+  if (C.mag && C.mag.style === "press-fit-side") for (const [a, b] of C.mag.yRows) br.push(a, a + 0.05, b, b + C.mag.Tm * tanT);
+  if (C.cut) br.push(C.yc);
+  if (C.rf > 0) for (let i = 1; i <= 10; i++) br.push(C.bt + C.rf * (1 - Math.cos(Math.PI / 2 * i / 10)));
+  const nseg = clamp(Math.round(P2.heightSegs), 4, 400);
+  for (let i = 1; i < nseg; i++) br.push(H * i / nseg);
+  const L = br.filter((v) => v >= from - 1e-9 && v <= H + 1e-9 && isFinite(v)).sort((a, b) => a - b);
+  const out = [];
+  for (const v of L) if (!out.length || v - out[out.length - 1] > 8e-3) out.push(v);
+  out[0] = from;
+  out[out.length - 1] = H;
+  if (out.length > 1 && out[out.length - 1] - out[out.length - 2] < 8e-3) out.splice(out.length - 2, 1);
+  return out;
+}
+var MeshBuf = class {
+  constructor() {
+    this.pos = [];
+    this.idx = [];
+    this.tag = [];
+    this.shells = [];
+    this._shellStart = 0;
+  }
+  v(x, y, z) {
+    this.pos.push(x, y, z);
+    return this.pos.length / 3 - 1;
+  }
+  t(a, b, c, tg = 0) {
+    this.idx.push(a, b, c);
+    this.tag.push(tg);
+  }
+  beginShell(name) {
+    this._shellStart = this.idx.length;
+    this._name = name;
+  }
+  endShell() {
+    this.shells.push({ name: this._name, start: this._shellStart, end: this.idx.length });
+  }
+};
+function triCap(M, loops, up, tg = 0) {
+  const P2 = M.pos;
+  const X = (i) => P2[3 * i], Z = (i) => P2[3 * i + 2];
+  const flat = [], contour = [], holes = [];
+  loops.forEach((loop2, li) => {
+    const arr = loop2.map((i) => new THREE.Vector2(X(i), Z(i)));
+    flat.push(...loop2);
+    if (li === 0) contour.push(...arr);
+    else holes.push(arr);
+  });
+  const faces = THREE.ShapeUtils.triangulateShape(contour, holes);
+  const tris = faces.map((f) => [flat[f[0]], flat[f[1]], flat[f[2]]]);
+  const cand = flat.slice().sort((a, b) => X(a) - X(b));
+  const cx = cand.map(X);
+  const lower = (v) => {
+    let lo = 0, hi = cx.length;
+    while (lo < hi) {
+      const m = lo + hi >> 1;
+      if (cx[m] < v) lo = m + 1;
+      else hi = m;
+    }
+    return lo;
+  };
+  const onEdge = (p, q, v) => {
+    const px = X(p), pz = Z(p), dx = X(q) - px, dz = Z(q) - pz, L2 = dx * dx + dz * dz;
+    if (L2 < 1e-16) return false;
+    const ux = X(v) - px, uz = Z(v) - pz, sp = (ux * dx + uz * dz) / L2;
+    if (sp <= 1e-9 || sp >= 1 - 1e-9) return false;
+    const cr = ux * dz - uz * dx;
+    return cr * cr < 1e-20 * L2;
+  };
+  const out = [], queue = tris.filter((t) => !(onEdge(t[0], t[1], t[2]) || onEdge(t[1], t[2], t[0]) || onEdge(t[2], t[0], t[1])));
+  let guard = 0;
+  while (queue.length && guard++ < 2e5) {
+    const t = queue.pop();
+    let split = false;
+    for (let e = 0; e < 3 && !split; e++) {
+      const p = t[e], q = t[(e + 1) % 3], x = t[(e + 2) % 3];
+      const px = X(p), pz = Z(p), dx = X(q) - px, dz = Z(q) - pz, L2 = dx * dx + dz * dz;
+      if (L2 < 1e-16) continue;
+      const x0 = Math.min(px, px + dx) - 1e-6, x1 = Math.max(px, px + dx) + 1e-6;
+      const z0 = Math.min(pz, pz + dz) - 1e-6, z1 = Math.max(pz, pz + dz) + 1e-6;
+      let on = null;
+      for (let i = lower(x0); i < cand.length && cx[i] <= x1; i++) {
+        const v = cand[i];
+        if (v === p || v === q || v === x) continue;
+        const vz = Z(v);
+        if (vz < z0 || vz > z1) continue;
+        const ux = X(v) - px, uz = vz - pz, sp = (ux * dx + uz * dz) / L2;
+        if (sp <= 1e-9 || sp >= 1 - 1e-9) continue;
+        const cr = ux * dz - uz * dx;
+        if (cr * cr < 1e-20 * L2) (on || (on = [])).push([sp, v]);
+      }
+      if (on) {
+        on.sort((a, b) => a[0] - b[0]);
+        const seq = [p, ...on.map((o) => o[1]), q];
+        for (let i = 0; i < seq.length - 1; i++) queue.push([seq[i], seq[i + 1], x]);
+        split = true;
+      }
+    }
+    if (!split) out.push(t);
+  }
+  let area = 0;
+  for (const t of out) area += (X(t[1]) - X(t[0])) * (Z(t[2]) - Z(t[0])) - (Z(t[1]) - Z(t[0])) * (X(t[2]) - X(t[0]));
+  const flip = up ? area > 0 : area < 0;
+  for (const t of out) flip ? M.t(t[0], t[2], t[1], tg) : M.t(t[0], t[1], t[2], tg);
+}
+function loopArea(xz) {
+  let a = 0;
+  const n = xz.length / 2;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    a += xz[2 * i] * xz[2 * j + 1] - xz[2 * j] * xz[2 * i + 1];
+  }
+  return a / 2;
+}
+function stitch(M, rows, outward, tags) {
+  for (let j = 0; j < rows.length - 1; j++) {
+    const A = rows[j], B = rows[j + 1], n = A.length;
+    for (let i = 0; i < n; i++) {
+      const i1 = (i + 1) % n, a = A[i], b = A[i1], c = B[i1], d = B[i];
+      const tg = tags ? tags[i] : 0;
+      if (outward) {
+        M.t(a, c, b, tg);
+        M.t(a, d, c, tg);
+      } else {
+        M.t(a, b, c, tg);
+        M.t(a, c, d, tg);
+      }
+    }
+  }
+}
+function solidFromLoops(M, levelsY, loopFn, name, tg = 0) {
+  const loops = levelsY.map(loopFn);
+  if (loops.some((xz) => !xz || xz.some((v) => !isFinite(v)))) return false;
+  const rev = loopArea(loops[Math.floor(loops.length / 2)]) < 0;
+  if (loops.some((xz) => loopArea(xz) < 0 !== rev || Math.abs(loopArea(xz)) < 1e-6)) return false;
+  M.beginShell(name);
+  const rows = [];
+  for (let li = 0; li < levelsY.length; li++) {
+    const y = levelsY[li];
+    let xz = loops[li];
+    if (rev) {
+      const r = [];
+      for (let i = xz.length / 2 - 1; i >= 0; i--) r.push(xz[2 * i], xz[2 * i + 1]);
+      xz = r;
+    }
+    const row = [];
+    for (let i = 0; i < xz.length; i += 2) row.push(M.v(xz[i], y, xz[i + 1]));
+    rows.push(row);
+  }
+  stitch(M, rows, true, null);
+  triCap(M, [rows[0]], false, tg);
+  triCap(M, [rows[rows.length - 1]], true, tg);
+  M.endShell();
+  return true;
+}
+function buildModel(P2) {
+  const warn = [];
+  const t0 = (typeof performance !== "undefined" ? performance : Date).now();
+  const C = makeCtx(P2, warn);
+  setupVertical(C);
+  if (C.stack) {
+    C.yB = Math.max(C.cel, C.hl);
+    buildSlots(C);
+    finishVertical(C);
+    C.yB = C.stack ? Math.max(C.cel, C.hl + C.Tst) : C.cel;
+    const keepWarn = warn.length;
+    buildSlots(C);
+    finishVertical(C);
+    warn.splice(keepWarn);
+  } else {
+    buildSlots(C);
+    finishVertical(C);
+  }
+  const W = [...new Set(warn)];
+  const M = new MeshBuf();
+  const H = C.H;
+  M.beginShell("body");
+  const Lo = levels(C, 0), Li = levels(C, C.bt);
+  const oRows = [], iRows = [];
+  let oTags = null, nO = -1, nI = -1, bbMin = [Infinity, Infinity], bbMax = [-Infinity, -Infinity];
+  const yOf = (y, fsv) => isNaN(fsv) || y <= C.yc ? y : C.yc + (y - C.yc) * (fsv - C.yc) / (H - C.yc);
+  for (const y of Lo) {
+    const L = outerLoop(C, y);
+    if (nO < 0) {
+      nO = L.xz.length / 2;
+      oTags = L.tag;
+      C.markO = L.mark;
+    } else if (L.xz.length / 2 !== nO) throw new Error("outer loop size mismatch");
+    const row = [];
+    for (let i = 0; i < nO; i++) {
+      const x = L.xz[2 * i], z = L.xz[2 * i + 1];
+      row.push(M.v(x, yOf(y, L.fs[i]), z));
+      if (x < bbMin[0]) bbMin[0] = x;
+      if (z < bbMin[1]) bbMin[1] = z;
+      if (x > bbMax[0]) bbMax[0] = x;
+      if (z > bbMax[1]) bbMax[1] = z;
+    }
+    oRows.push(row);
+  }
+  let capVol = 0, prevA = null, prevY = 0;
+  for (const y of Li) {
+    const L = innerLoop(C, y);
+    if (nI < 0) nI = L.xz.length / 2;
+    else if (L.xz.length / 2 !== nI) throw new Error("inner loop size mismatch");
+    const row = [];
+    for (let i = 0; i < nI; i++) row.push(M.v(L.xz[2 * i], yOf(y, L.fs[i]), L.xz[2 * i + 1]));
+    iRows.push(row);
+    const A = Math.abs(loopArea(L.xz));
+    if (prevA !== null && (!C.cut || y <= C.yc)) capVol += (A + prevA) / 2 * (y - prevY);
+    prevA = A;
+    prevY = y;
+  }
+  stitch(M, oRows, true, oTags);
+  stitch(M, iRows, false, null);
+  triCap(M, [oRows[0]], false);
+  triCap(M, [iRows[0]], true);
+  const voidTops = [];
+  for (const vd of C.voids) {
+    const k = vd.side, n = C.nrm[k], t = C.tan[k], a0 = C.apo[k];
+    const lv = [vd.y0, vd.y1, ...vd.breaks].filter((v) => v >= vd.y0 && v <= vd.y1).sort((a, b) => a - b);
+    const nseg = Math.max(2, Math.round((vd.y1 - vd.y0) / 2));
+    for (let i = 1; i < nseg; i++) lv.push(vd.y0 + (vd.y1 - vd.y0) * i / nseg);
+    lv.sort((a, b) => a - b);
+    const ly = lv.filter((v, i) => !i || v - lv[i - 1] > 8e-3);
+    ly[ly.length - 1] = vd.y1;
+    const dc = (vd.d0 + vd.d1) / 2;
+    const rows = ly.map((y) => {
+      const hu = vd.half(y), hn = vd.halfN(y);
+      const loc = [[-hu, dc - hn], [hu, dc - hn], [hu, dc + hn], [-hu, dc + hn]];
+      return loc.map(([u, dd]) => M.v(a0 * n[0] + (vd.s + u) * t[0] - dd * n[0], y, a0 * n[1] + (vd.s + u) * t[1] - dd * n[1]));
+    });
+    const r0 = rows[0];
+    const xz0 = [];
+    for (const i of r0) xz0.push(M.pos[3 * i], M.pos[3 * i + 2]);
+    if (loopArea(xz0) < 0) rows.forEach((r) => r.reverse());
+    stitch(M, rows, false, null);
+    triCap(M, [rows[0]], true, vd.north ? 3 : 4);
+    if (vd.open) voidTops.push(rows[rows.length - 1]);
+    else triCap(M, [rows[rows.length - 1]], false, vd.north ? 3 : 4);
+  }
+  triCap(M, [oRows[oRows.length - 1], iRows[iRows.length - 1], ...voidTops], true);
+  M.endShell();
+  const P_ = P2;
+  const yDivTop = Math.min(C.bt + clamp(P_.dividerHeight, 0.2, 1) * (H - C.bt), C.stack ? H - C.hl - C.zc - 0.4 : H, C.cut ? C.yc : H);
+  const nx = clamp(Math.round(P_.dividersX), 0, 5), nz = clamp(Math.round(P_.dividersY), 0, 6);
+  const td = Math.max(1.2, 0.8 * C.w), ov = Math.min(0.5 * C.w, 1);
+  let divVol = 0;
+  if ((nx || nz) && yDivTop > C.bt + 2) {
+    const dl = Li.filter((y) => y < yDivTop - 0.01);
+    dl.push(yDivTop);
+    const dl2 = [C.bt - Math.min(0.4, C.bt * 0.4), ...dl.slice(1)];
+    const innerAt = (y) => innerLoop(C, Math.max(y, C.bt)).xz;
+    const cache = /* @__PURE__ */ new Map();
+    const getIn = (y) => {
+      if (!cache.has(y)) cache.set(y, innerAt(y));
+      return cache.get(y);
+    };
+    const chord = (xz, ox, oz, dx, dz) => {
+      let tmin = Infinity, tmax = -Infinity;
+      const n = xz.length / 2;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n, ax = xz[2 * i], az = xz[2 * i + 1], bx = xz[2 * j], bz = xz[2 * j + 1];
+        const ex = bx - ax, ez = bz - az, den = dx * ez - dz * ex;
+        if (Math.abs(den) < 1e-12) continue;
+        const tt = ((ax - ox) * ez - (az - oz) * ex) / den, s = ((ax - ox) * dz - (az - oz) * dx) / den;
+        if (s >= 0 && s <= 1) {
+          tmin = Math.min(tmin, tt);
+          tmax = Math.max(tmax, tt);
+        }
+      }
+      return [tmin, tmax];
+    };
+    const topXZ = getIn(H * 0.6);
+    let xmin = Infinity, xmax = -Infinity, zmin = Infinity, zmax = -Infinity;
+    for (let i = 0; i < topXZ.length; i += 2) {
+      xmin = Math.min(xmin, topXZ[i]);
+      xmax = Math.max(xmax, topXZ[i]);
+      zmin = Math.min(zmin, topXZ[i + 1]);
+      zmax = Math.max(zmax, topXZ[i + 1]);
+    }
+    const plates = [];
+    if (C.collar && nz >= 2) {
+      for (let i = 0; i < nz; i++) {
+        const a = i * 2 * Math.PI / nz + Math.PI / nz;
+        plates.push({ ox: 0, oz: 0, dx: Math.cos(a), dz: Math.sin(a), radial: true });
+      }
+    } else if (nz) {
+      for (let i = 1; i <= nz; i++) plates.push({ ox: 0, oz: zmin + (zmax - zmin) * i / (nz + 1), dx: 1, dz: 0 });
+    }
+    for (let i = 1; i <= nx; i++) plates.push({ ox: xmin + (xmax - xmin) * i / (nx + 1), oz: 0, dx: 0, dz: 1 });
+    for (const pl of plates) {
+      const px = -pl.dz, pz = pl.dx;
+      const ext = (y) => {
+        const xz = getIn(y);
+        let lo = -Infinity, hi = Infinity;
+        for (const o of [-td / 2, 0, td / 2]) {
+          const [a, b] = chord(xz, pl.ox + px * o, pl.oz + pz * o, pl.dx, pl.dz);
+          lo = Math.max(lo, pl.radial ? -td : a);
+          hi = Math.min(hi, b);
+        }
+        return [lo - (pl.radial ? 0 : ov), hi + ov];
+      };
+      const e0 = ext(dl[Math.floor(dl.length / 2)]);
+      if (!isFinite(e0[0]) || !isFinite(e0[1]) || e0[1] - e0[0] < 3) continue;
+      const built = solidFromLoops(M, dl2, (y) => {
+        const [lo, hi] = ext(y);
+        const h = td / 2;
+        const c = (s, o) => [pl.ox + pl.dx * s + px * o, pl.oz + pl.dz * s + pz * o];
+        const pts = [c(lo, -h), c(hi, -h), c(hi, h), c(lo, h)];
+        return pts.flat();
+      }, "divider");
+      if (built) {
+        const [lo, hi] = ext((C.bt + yDivTop) / 2);
+        divVol += (hi - lo - 2 * ov) * td * (yDivTop - C.bt);
+      }
+    }
+  }
+  let ledgeInfo = null;
+  if (P2.labelLedge) {
+    const k = C.cut ? (C.front + Math.floor(C.N / 2)) % C.N : C.front;
+    const yTop = Math.min(H - 1.6, C.stack ? H - C.hl - C.zc - 0.6 : H - 1.6);
+    const Fi = frameLevel(C, new Array(C.N).fill(C.w), true);
+    const halfLen = 0.36 * (Fi.s1[k] - Fi.s0[k]);
+    const sMid = (Fi.s0[k] + Fi.s1[k]) / 2;
+    const depthMax = 0.22 * Math.min(...C.apo);
+    const dl = Math.min(9, depthMax);
+    const lip = 1.2;
+    const yBot = yTop - lip - dl * C.tanT;
+    if (yBot > C.bt + 4) {
+      const n = C.nrm[k], t = C.tan[k], a0 = C.apo[k] - C.w;
+      const sec = [[-ov, yBot - 0.01], [0, yBot], [dl, yTop - lip], [dl, yTop], [-ov, yTop]];
+      M.beginShell("ledge");
+      const mk = (s) => sec.map(([q, y]) => M.v(a0 * n[0] - q * n[0] + s * t[0], y, a0 * n[1] - q * n[1] + s * t[1]));
+      const A = mk(sMid - halfLen), B = mk(sMid + halfLen);
+      const m = sec.length;
+      for (let i = 0; i < m; i++) {
+        const i1 = (i + 1) % m;
+        M.t(A[i], A[i1], B[i1]);
+        M.t(A[i], B[i1], B[i]);
+      }
+      for (let i = 1; i < m - 1; i++) {
+        M.t(A[0], A[i + 1], A[i]);
+        M.t(B[0], B[i], B[i + 1]);
+      }
+      M.endShell();
+      ledgeInfo = { side: k };
+    }
+  }
+  const pos = M.pos, idx = M.idx;
+  const shellVol = (sh) => {
+    let v = 0;
+    for (let i = sh.start; i < sh.end; i += 3) {
+      const a = 3 * idx[i], b = 3 * idx[i + 1], c = 3 * idx[i + 2];
+      v += pos[a] * (pos[b + 1] * pos[c + 2] - pos[b + 2] * pos[c + 1]) - pos[a + 1] * (pos[b] * pos[c + 2] - pos[b + 2] * pos[c]) + pos[a + 2] * (pos[b] * pos[c + 1] - pos[b + 1] * pos[c]);
+    }
+    return v / 6;
+  };
+  let volume = 0;
+  for (const sh of M.shells) {
+    let v = shellVol(sh);
+    if (v < 0) {
+      for (let i = sh.start; i < sh.end; i += 3) {
+        const tmp = idx[i + 1];
+        idx[i + 1] = idx[i + 2];
+        idx[i + 2] = tmp;
+      }
+      v = -v;
+    }
+    sh.volume = v;
+    volume += v;
+  }
+  const overlapEst = M.shells.filter((s) => s.name !== "body").length * 0;
+  const bodyVol = M.shells[0].volume;
+  const check = manifoldCheck(M);
+  const elapsed = (typeof performance !== "undefined" ? performance : Date).now() - t0;
+  const dens = DENSITY[P2.filamentPreset] || 1.24;
+  const solidVol = bodyVol + M.shells.filter((s) => s.name !== "body").reduce((a, s) => a + s.volume, 0) * 0.94;
+  const stats = {
+    bbox: [bbMax[0] - bbMin[0], bbMax[1] - bbMin[1], H],
+    pitch: lattice(C),
+    volume: solidVol,
+    mass: solidVol / 1e3 * dens,
+    capacity: Math.max(0, capVol - divVol) / 1e3,
+    tris: M.idx.length / 3,
+    verts: M.pos.length / 3,
+    manifold: check,
+    ms: elapsed,
+    density: dens
+  };
+  if (C.snap) {
+    const s = C.snap;
+    stats.strain = 3 * s.t * s.h / (2 * s.Lbeam * s.Lbeam) * 100;
+    const lim = STRAIN_LIMIT[P2.filamentPreset] || 2.2;
+    if (P2.filamentPreset === "PLA (Stiff)" && stats.strain > 2.2) stats.strainWarn = "\u26A0 High snap strain for PLA \u2014 switch to PETG or reduce hook lip";
+    else if (stats.strain > lim) stats.strainWarn = `\u26A0 Snap strain ${stats.strain.toFixed(1)}% exceeds ~${lim}% for ${P2.filamentPreset}`;
+  }
+  const clr = { "PLA (Stiff)": [0.15, 0.25], "PETG (Recommended for Snap)": [0.2, 0.3], "ABS / ASA": [0.2, 0.3], "TPU (Flex)": [0.1, 0.2] }[P2.filamentPreset];
+  if (clr && (P2.clearance < clr[0] || P2.clearance > clr[1]) && P2.jointType !== "none" && P2.jointType !== "magnetic")
+    W.push(`Clearance ${P2.clearance.toFixed(2)} mm is outside the ${clr[0]}\u2013${clr[1]} mm range typical for ${P2.filamentPreset}.`);
+  return {
+    C,
+    mesh: { pos: Float32Array.from(M.pos), idx: Uint32Array.from(M.idx), tag: Uint8Array.from(M.tag), shells: M.shells },
+    stats,
+    warnings: W,
+    ledge: ledgeInfo,
+    clip: buildClip(C)
+  };
+}
+function lattice(C) {
+  const W = C.P.outerWidth;
+  if (C.shape === "box") return { label: `${C.P.outerWidth.toFixed(1)} \xD7 ${C.P.outerDepth.toFixed(1)} mm`, T: [[C.P.outerWidth, 0], [0, C.P.outerDepth]] };
+  if (C.shape === "hexagon" || C.collar && C.N === 6) return { label: `${W.toFixed(1)} mm (hex, 60\xB0)`, T: [[W, 0], [W / 2, W * Math.sqrt(3) / 2]] };
+  if (C.shape === "octagon" || C.collar && C.N === 4) return { label: `${W.toFixed(1)} mm (square)`, T: [[W, 0], [0, W]] };
+  return { label: `${W.toFixed(1)} mm (flat-to-flat, rotated neighbours)`, T: null };
+}
+function manifoldCheck(M) {
+  const idx = M.idx;
+  let open = 0, nonManifold = 0, flipped = 0;
+  for (const sh of M.shells) {
+    const map = /* @__PURE__ */ new Map();
+    for (let i = sh.start; i < sh.end; i += 3) {
+      for (let e = 0; e < 3; e++) {
+        const a = idx[i + e], b = idx[i + (e + 1) % 3];
+        const k = a < b ? a * 4294967296 + b : b * 4294967296 + a;
+        const r = map.get(k) || [0, 0];
+        if (a < b) r[0]++;
+        else r[1]++;
+        map.set(k, r);
+      }
+    }
+    for (const r of map.values()) {
+      const tot = r[0] + r[1];
+      if (tot === 1) open++;
+      else if (tot > 2) nonManifold++;
+      else if (r[0] !== 1) flipped++;
+    }
+  }
+  return { ok: open === 0 && nonManifold === 0 && flipped === 0, open, nonManifold, flipped, shells: M.shells.length };
+}
+function buildClip(C) {
+  if (!C.clipDef || !C.clipDef.male) return null;
+  const def = C.clipDef.male;
+  const Lc = C.yJ1 - C.yJ0, tanT = C.tanT;
+  if (!(Lc > 3)) return null;
+  const DM = def.kind === "snapM" ? profDepth(def.prof) : profDepth(def.prof);
+  const sl = { ...def, z: (y) => Math.min(DM, (y + 1e-3) / tanT, (Lc - y + 1e-3) / tanT) };
+  if (def.kind === "snapM") sl.nSlot = 0.6;
+  const M = new MeshBuf();
+  const ly = [0, DM * tanT, Lc - DM * tanT, Lc];
+  const nseg = Math.max(4, Math.round(Lc / 2));
+  for (let i = 1; i < nseg; i++) ly.push(Lc * i / nseg);
+  ly.sort((a, b) => a - b);
+  const L = ly.filter((v2, i) => v2 >= 0 && v2 <= Lc && (!i || v2 - ly[i - 1] > 8e-3));
+  solidFromLoops(M, L, (y) => {
+    const up = [];
+    slotPoints(sl, y, 0, up);
+    const lo = up.map(([u, n]) => [u, -n]).reverse();
+    const all = [...up, ...lo.slice(1, lo.length - 1)];
+    const out = [];
+    for (const [u, n] of all) out.push(u, n);
+    return out;
+  }, "clip", 1);
+  let v = 0;
+  const pos = M.pos, idx = M.idx;
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = 3 * idx[i], b = 3 * idx[i + 1], c = 3 * idx[i + 2];
+    v += pos[a] * (pos[b + 1] * pos[c + 2] - pos[b + 2] * pos[c + 1]) - pos[a + 1] * (pos[b] * pos[c + 2] - pos[b + 2] * pos[c]) + pos[a + 2] * (pos[b] * pos[c + 1] - pos[b + 1] * pos[c]);
+  }
+  if (v < 0) for (let i = 0; i < idx.length; i += 3) {
+    const t = idx[i + 1];
+    idx[i + 1] = idx[i + 2];
+    idx[i + 2] = t;
+  }
+  return { pos: Float32Array.from(M.pos), idx: Uint32Array.from(M.idx), tag: Uint8Array.from(M.tag), shells: M.shells, length: Lc, volume: Math.abs(v / 6), manifold: manifoldCheck(M) };
+}
+function neighbours(model2, mode) {
+  const C = model2.C, N = C.N, out = [];
+  if (mode === "single") return out;
+  const pol = C.polarity;
+  const across = (k) => {
+    const n = C.nrm[k], a = C.apo[k];
+    if (pol === "alternating" && N % 2 === 0) return { rot: 0, tx: 2 * a * n[0], tz: 2 * a * n[1], side: k };
+    return { rot: Math.PI, tx: 2 * a * n[0], tz: 2 * a * n[1], side: k };
+  };
+  const compose = (A, B) => {
+    const c = Math.cos(A.rot), s = Math.sin(A.rot);
+    return { rot: (A.rot + B.rot) % (2 * Math.PI), tx: A.tx + c * B.tx - s * B.tz, tz: A.tz + s * B.tx + c * B.tz, side: -1 };
+  };
+  const firstActive = () => {
+    for (let k = 0; k < N; k++) if (C.active && C.active[k] && C.sides[k].length) return k;
+    return 0;
+  };
+  if (mode === "vertical-stack") {
+    out.push({ rot: 0, tx: 0, tz: 0, ty: stackOffset(C), side: -1, stack: true });
+    return out;
+  }
+  const k0 = firstActive();
+  if (mode === "pair-1x2") {
+    out.push(across(k0));
+    return out;
+  }
+  const k1 = (() => {
+    for (let j = 1; j < N; j++) {
+      const k = (k0 + j) % N;
+      if (C.active && C.active[k] && C.sides[k].length) return k;
+    }
+    return (k0 + 1) % N;
+  })();
+  const kAdj = (k0 + 1) % N;
+  if (mode === "cluster-3") {
+    out.push(across(k0));
+    out.push(across(C.active && C.active[kAdj] ? kAdj : k1));
+    return out;
+  }
+  if (mode === "grid-2x2") {
+    if (N % 2) {
+      for (let k = 0; k < N; k++) out.push(across(k));
+      return out;
+    }
+    const B0 = across(k0), B1 = across(kAdj);
+    out.push(B0, B1);
+    const opp = (kAdj + N / 2) % N;
+    const kd = B0.rot ? opp : kAdj;
+    out.push(compose(B0, across(kd)));
+    return out;
+  }
+  return out;
+}
+function stackOffset(C) {
+  if (!C.stack) return C.H + 2;
+  return C.H - C.hl - (C.d - C.zc) * C.tanT;
+}
+function engageOffset(model2, nb, e) {
+  const C = model2.C, f = 1 - e;
+  if (nb.stack) return { dx: 0, dy: f * (C.hl + 12), dz: 0 };
+  const jt = C.P.jointType;
+  if (C.sliding && C.polarity !== "all-female-clip") {
+    let dir = 1;
+    if (C.polarity === "alternating" && nb.side >= 0) {
+      const aMale = nb.side < C.N / 2;
+      dir = aMale ? -1 : 1;
+    }
+    return { dx: 0, dy: dir * f * (C.yJ1 - C.yJ0 + C.DM * C.tanT + 3), dz: 0 };
+  }
+  if (C.polarity === "all-female-clip" && C.sliding) return { dx: 0, dy: 0, dz: 0, clipDy: f * (C.yJ1 - C.yJ0 + 4) };
+  const k = nb.side >= 0 ? nb.side : 0;
+  const n = C.nrm[k], d = (C.DF || (jt === "magnetic" ? 6 : 4)) + 6;
+  return { dx: n[0] * f * d, dy: 0, dz: n[1] * f * d, clipDy: 0 };
+}
+function clipPlacements(model2, nbs2) {
+  const C = model2.C;
+  if (!model2.clip) return [];
+  const out = [];
+  for (const nb of nbs2) {
+    if (nb.side < 0) continue;
+    const k = nb.side, n = C.nrm[k], t = C.tan[k], a = C.apo[k];
+    for (const sl of C.sides[k]) {
+      out.push({ x: a * n[0] + sl.s * t[0], z: a * n[1] + sl.s * t[1], y: C.yJ0, ang: Math.atan2(n[1], n[0]) });
+    }
+  }
+  return out;
+}
+function clearanceAt(model2, nbs2, y) {
+  const C = model2.C;
+  if (!nbs2.length || C.P.jointType === "none") return null;
+  const A = outerLoop(C, y);
+  const nA = A.xz.length / 2;
+  let minGap = Infinity, interf = 0, samples = 0;
+  const segDist = (px, pz, xz) => {
+    let m = Infinity;
+    const n = xz.length / 2;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, ax = xz[2 * i], az = xz[2 * i + 1], bx = xz[2 * j], bz = xz[2 * j + 1];
+      const ex = bx - ax, ez = bz - az, L2 = ex * ex + ez * ez || 1e-12;
+      const t = clamp(((px - ax) * ex + (pz - az) * ez) / L2, 0, 1);
+      const dx = ax + t * ex - px, dz = az + t * ez - pz;
+      m = Math.min(m, dx * dx + dz * dz);
+    }
+    return Math.sqrt(m);
+  };
+  const inside = (px, pz, xz) => {
+    let c = false;
+    const n = xz.length / 2;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = xz[2 * i], zi = xz[2 * i + 1], xj = xz[2 * j], zj = xz[2 * j + 1];
+      if (zi > pz !== zj > pz && px < (xj - xi) * (pz - zi) / (zj - zi) + xi) c = !c;
+    }
+    return c;
+  };
+  for (const nb of nbs2) {
+    if (nb.side < 0 || nb.stack) continue;
+    const c = Math.cos(nb.rot), s = Math.sin(nb.rot);
+    const B = new Array(A.xz.length);
+    for (let i = 0; i < nA; i++) {
+      const x = A.xz[2 * i], z = A.xz[2 * i + 1];
+      B[2 * i] = c * x - s * z + nb.tx;
+      B[2 * i + 1] = s * x + c * z + nb.tz;
+    }
+    const n = C.nrm[nb.side], a = C.apo[nb.side];
+    const test = (src, dst, mark) => {
+      for (let i = 0; i < nA; i++) {
+        if (!mark[i]) continue;
+        const px = src[2 * i], pz = src[2 * i + 1];
+        const off = px * n[0] + pz * n[1] - a;
+        if (Math.abs(off) < 0.08 || Math.abs(off) > 20) continue;
+        samples++;
+        if (inside(px, pz, dst)) {
+          interf++;
+          continue;
+        }
+        minGap = Math.min(minGap, segDist(px, pz, dst));
+      }
+    };
+    test(A.xz, B, A.mark);
+    test(B, A.xz, A.mark);
+  }
+  if (!samples) return null;
+  return { y, minGap, interf, samples };
+}
+function crossingsFast(A, B) {
+  const segs = [];
+  const add = (xz, id) => {
+    const n = xz.length / 2;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const ax = xz[2 * i], az = xz[2 * i + 1], bx = xz[2 * j], bz = xz[2 * j + 1];
+      segs.push([Math.min(ax, bx), Math.max(ax, bx), ax, az, bx, bz, id, i, n]);
+    }
+  };
+  add(A, 0);
+  if (B !== A) add(B, 1);
+  segs.sort((p, q) => p[0] - q[0]);
+  const e = 1e-9, o = (px, pz, qx, qz, rx, rz) => (qx - px) * (rz - pz) - (qz - pz) * (rx - px);
+  const active = [];
+  for (const s of segs) {
+    for (let a = active.length - 1; a >= 0; a--) if (active[a][1] < s[0] - 1e-9) active.splice(a, 1);
+    for (const t of active) {
+      if (B === A) {
+        const d = Math.abs(s[7] - t[7]);
+        if (d <= 1 || d === s[8] - 1) continue;
+      } else if (s[6] === t[6]) continue;
+      if (Math.max(s[3], s[5]) < Math.min(t[3], t[5]) - 1e-9 || Math.max(t[3], t[5]) < Math.min(s[3], s[5]) - 1e-9) continue;
+      const d1 = o(t[2], t[3], t[4], t[5], s[2], s[3]), d2 = o(t[2], t[3], t[4], t[5], s[4], s[5]);
+      const d3 = o(s[2], s[3], s[4], s[5], t[2], t[3]), d4 = o(s[2], s[3], s[4], s[5], t[4], t[5]);
+      if ((d1 > e && d2 < -e || d1 < -e && d2 > e) && (d3 > e && d4 < -e || d3 < -e && d4 > e)) return true;
+    }
+    active.push(s);
+  }
+  return false;
+}
+function validateModel(m) {
+  const C = m.C, H = C.H;
+  if (!m.stats.manifold.ok) return "mesh not closed";
+  if (m.clip && !m.clip.manifold.ok) return "clip not closed";
+  const ys = [0, C.cel, C.yB, C.yB + 0.6, C.bt, C.bt + 0.3, H * 0.5, H - 0.3, H];
+  if (C.yJ0 !== void 0) ys.push(C.yJ0, C.yJ0 + 0.5, (C.yJ0 + C.yJ1) / 2, C.yJ1 - 0.5);
+  if (C.stack) ys.push(C.hl, C.hl + C.Tst * 0.5, C.yW0, H - C.hl * 0.5);
+  for (let i = 1; i <= 5; i++) ys.push(C.yB * i / 6);
+  for (const y of ys) {
+    if (!(y >= 0 && y <= H)) continue;
+    const O = outerLoop(C, y).xz;
+    if (crossingsFast(O, O)) return `outer contour self-intersects at y=${y.toFixed(1)}`;
+    if (y >= C.bt) {
+      const I = innerLoop(C, y).xz;
+      if (crossingsFast(I, I)) return `cavity contour self-intersects at y=${y.toFixed(1)}`;
+      if (crossingsFast(O, I)) return `wall pierced at y=${y.toFixed(1)}`;
+    }
+  }
+  if (C.stack) {
+    const off = stackOffset(C);
+    for (const yl of [H - 0.05, H - C.hl * 0.5, off + 0.05]) {
+      const yu = yl - off;
+      if (yu < 0 || yu > H) continue;
+      if (crossingsFast(outerLoop(C, yu).xz, innerLoop(C, yl).xz)) return "stacking plug collides";
+    }
+  }
+  return null;
+}
+function buildModelSafe(P2) {
+  let m = buildModel(P2);
+  let why = validateModel(m);
+  if (!why) {
+    m.valid = true;
+    return m;
+  }
+  const tries = [];
+  if (P2.jointType !== "none") for (const f of [0.75, 0.55, 0.4]) tries.push([{ ...P2, jointDepth: Math.max(1.5, P2.jointDepth * f), jointWidth: Math.max(3, P2.jointWidth * f), hermSpacing: P2.hermSpacing, snapHookLip: Math.max(0.4, P2.snapHookLip * f) }, `Joint reduced to ${f * 100}% to resolve a geometry conflict (${why}).`]);
+  if (P2.jointType !== "none") tries.push([{ ...P2, jointsPerSide: 1 }, `Single connector per wall to resolve a geometry conflict (${why}).`]);
+  if (P2.stackableLip) tries.push([{ ...P2, stackableLip: false }, `Stacking rim disabled to resolve a geometry conflict (${why}).`]);
+  if (P2.jointType !== "none") tries.push([{ ...P2, jointType: "none" }, `Joints removed \u2014 no valid layout for these settings (${why}).`]);
+  tries.push([{ ...P2, jointType: "none", stackableLip: false, frontCutout: 0, dividersX: 0, dividersY: 0, labelLedge: false }, `Simplified to a plain container (${why}).`]);
+  for (const [Q, msg] of tries) {
+    const m2 = buildModel(Q);
+    if (!validateModel(m2)) {
+      m2.warnings.unshift("\u26A0 " + msg);
+      m2.valid = true;
+      m2.adjusted = Q;
+      return m2;
+    }
+  }
+  m.valid = false;
+  m.warnings.unshift("\u26A0 Geometry conflict: " + why);
+  return m;
+}
+
+// src/app.js
+var $ = (s) => document.querySelector(s);
+var $$ = (s) => [...document.querySelectorAll(s)];
+var PARAMS = SCHEMA.flatMap((g) => g.params.map((p) => ({ ...p, group: g })));
+var PBY = Object.fromEntries(PARAMS.map((p) => [p.key, p]));
+var P = { ...PRESETS["Hex Honeycomb Dovetail"] };
+var view = { cut: "off", cutPos: 50, shadow: true, theme: "dark" };
+try {
+  const t = localStorage.getItem("tl-theme");
+  if (t === "light" || t === "dark") view.theme = t;
+} catch (e) {
+}
+var canvas = $("#cv");
+var renderer = new THREE2.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE2.SRGBColorSpace;
+renderer.toneMapping = THREE2.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.92;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE2.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+var scene = new THREE2.Scene();
+var pmrem = new THREE2.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+var camera = new THREE2.PerspectiveCamera(35, 1, 1, 2e4);
+camera.position.set(220, 200, 260);
+var controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotateSpeed = 1.6;
+var hemi = new THREE2.HemisphereLight(16777215, 4210752, 0.55);
+scene.add(hemi);
+var sun = new THREE2.DirectionalLight(16777215, 1.6);
+sun.position.set(180, 320, 140);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -4e-4;
+sun.shadow.normalBias = 0.6;
+scene.add(sun, sun.target);
+var fill = new THREE2.DirectionalLight(12113151, 0.35);
+fill.position.set(-200, 120, -160);
+scene.add(fill);
+var plate = new THREE2.Mesh(new THREE2.PlaneGeometry(1, 1), new THREE2.ShadowMaterial({ opacity: 0.22 }));
+plate.rotation.x = -Math.PI / 2;
+plate.receiveShadow = true;
+plate.position.y = -0.02;
+scene.add(plate);
+var grid = null;
+var asm = new THREE2.Group();
+scene.add(asm);
+var cutPlane = new THREE2.Plane(new THREE2.Vector3(0, -1, 0), 0);
+function capify(mat, capHex) {
+  mat.userData.cap = { value: new THREE2.Color(capHex).convertLinearToSRGB() };
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.capColor = mat.userData.cap;
+    sh.fragmentShader = "uniform vec3 capColor;\n" + sh.fragmentShader.replace(
+      "#include <dithering_fragment>",
+      "#include <dithering_fragment>\n  if (!gl_FrontFacing) { gl_FragColor = vec4(capColor, 1.0); }"
+    );
+  };
+  mat.customProgramCacheKey = () => "cap";
+  return mat;
+}
+var matUnit = capify(new THREE2.MeshPhysicalMaterial({ vertexColors: true, side: THREE2.FrontSide, clippingPlanes: [] }), "#3aa0e0");
+var matGhost = capify(new THREE2.MeshPhysicalMaterial({ color: 5155038, transparent: true, side: THREE2.FrontSide, clippingPlanes: [], depthWrite: false, forceSinglePass: true }), "#e0603a");
+var matGhostSolid = capify(new THREE2.MeshPhysicalMaterial({ vertexColors: true, side: THREE2.FrontSide, clippingPlanes: [] }), "#e0603a");
+var matClip = capify(new THREE2.MeshPhysicalMaterial({ color: 14711354, roughness: 0.4, side: THREE2.FrontSide, clippingPlanes: [] }), "#e0603a");
+var matWire = new THREE2.MeshBasicMaterial({ color: 0, wireframe: true, transparent: true, opacity: 0.18, clippingPlanes: [] });
+function creasedGeometry(m, crease = 32 * Math.PI / 180) {
+  const { pos, idx, tag } = m;
+  const nv = pos.length / 3, nt = idx.length / 3;
+  const fn = new Float32Array(nt * 3);
+  for (let t = 0; t < nt; t++) {
+    const a = 3 * idx[3 * t], b = 3 * idx[3 * t + 1], c = 3 * idx[3 * t + 2];
+    const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2];
+    const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2];
+    fn[3 * t] = uy * vz - uz * vy;
+    fn[3 * t + 1] = uz * vx - ux * vz;
+    fn[3 * t + 2] = ux * vy - uy * vx;
+  }
+  const cnt = new Uint32Array(nv + 1);
+  for (let i = 0; i < idx.length; i++) cnt[idx[i] + 1]++;
+  for (let i = 0; i < nv; i++) cnt[i + 1] += cnt[i];
+  const fill2 = cnt.slice(0, nv), adj = new Uint32Array(idx.length);
+  for (let i = 0; i < idx.length; i++) adj[fill2[idx[i]]++] = i / 3 | 0;
+  const cosC = Math.cos(crease);
+  const P3 = new Float32Array(nt * 9), N3 = new Float32Array(nt * 9);
+  for (let t = 0; t < nt; t++) {
+    const fx = fn[3 * t], fy = fn[3 * t + 1], fz = fn[3 * t + 2], fl = Math.hypot(fx, fy, fz) || 1;
+    for (let k = 0; k < 3; k++) {
+      const v = idx[3 * t + k], o = 9 * t + 3 * k;
+      P3[o] = pos[3 * v];
+      P3[o + 1] = pos[3 * v + 1];
+      P3[o + 2] = pos[3 * v + 2];
+      let sx = 0, sy = 0, sz = 0;
+      for (let q = cnt[v]; q < cnt[v + 1]; q++) {
+        const g2 = adj[q], gx = fn[3 * g2], gy = fn[3 * g2 + 1], gz = fn[3 * g2 + 2], gl = Math.hypot(gx, gy, gz) || 1;
+        if ((fx * gx + fy * gy + fz * gz) / (fl * gl) >= cosC) {
+          sx += gx;
+          sy += gy;
+          sz += gz;
+        }
+      }
+      const l = Math.hypot(sx, sy, sz) || 1;
+      N3[o] = sx / l;
+      N3[o + 1] = sy / l;
+      N3[o + 2] = sz / l;
+    }
+  }
+  const g = new THREE2.BufferGeometry();
+  g.setAttribute("position", new THREE2.BufferAttribute(P3, 3));
+  g.setAttribute("normal", new THREE2.BufferAttribute(N3, 3));
+  g.setAttribute("color", new THREE2.BufferAttribute(new Float32Array(nt * 9), 3));
+  g.userData.tags = tag;
+  g.computeBoundingBox();
+  g.computeBoundingSphere();
+  return g;
+}
+function tagColors() {
+  const body = new THREE2.Color(P.colorPrimary);
+  const male = new THREE2.Color(P.colorJoint ? P.colorMale : P.colorPrimary);
+  const fem = new THREE2.Color(P.colorJoint ? P.colorFemale : P.colorPrimary);
+  return [body, male, fem, male, fem];
+}
+function paint(g, clipTag) {
+  const cols = tagColors(), tags = g.userData.tags, col = g.attributes.color.array;
+  for (let t = 0; t < tags.length; t++) {
+    const c = cols[clipTag !== void 0 ? clipTag : tags[t]] || cols[0];
+    for (let k = 0; k < 3; k++) {
+      const o = 9 * t + 3 * k;
+      col[o] = c.r;
+      col[o + 1] = c.g;
+      col[o + 2] = c.b;
+    }
+  }
+  g.attributes.color.needsUpdate = true;
+}
+var model = null;
+var unitGeo = null;
+var clipGeo = null;
+var nbs = [];
+var lastClr = null;
+var meshes = { unit: null, ghosts: [], clips: [], wires: [] };
+function rebuild(preview = false) {
+  const Q = preview ? { ...P, curveSegs: Math.min(P.curveSegs, 40), heightSegs: Math.min(P.heightSegs, 40) } : P;
+  model = buildModelSafe(Q);
+  if (unitGeo) unitGeo.dispose();
+  if (clipGeo) clipGeo.dispose();
+  unitGeo = creasedGeometry(model.mesh);
+  paint(unitGeo);
+  clipGeo = model.clip ? creasedGeometry(model.clip) : null;
+  if (clipGeo) paint(clipGeo, 1);
+  layoutAssembly();
+  updateHUD();
+  updateExportHint();
+}
+function clearAsm() {
+  for (const m of [...asm.children]) asm.remove(m);
+  meshes.ghosts = [];
+  meshes.clips = [];
+  meshes.wires = [];
+  meshes.unit = null;
+}
+function layoutAssembly() {
+  clearAsm();
+  nbs = neighbours(model, P.assemblyMode);
+  const unit = new THREE2.Mesh(unitGeo, matUnit);
+  unit.castShadow = unit.receiveShadow = true;
+  asm.add(unit);
+  meshes.unit = unit;
+  const solid = P.ghostOpacity >= 0.99 || view.cut !== "off";
+  for (const nb of nbs) {
+    const g = new THREE2.Mesh(unitGeo, solid ? matGhostSolid : matGhost);
+    g.castShadow = solid;
+    g.receiveShadow = solid;
+    g.userData.nb = nb;
+    asm.add(g);
+    meshes.ghosts.push(g);
+  }
+  if (clipGeo && model.C.polarity === "all-female-clip") {
+    for (const c of clipPlacements(model, nbs)) {
+      const m = new THREE2.Mesh(clipGeo, matClip);
+      m.userData.place = c;
+      m.castShadow = true;
+      asm.add(m);
+      meshes.clips.push(m);
+    }
+  }
+  for (const m of [unit, ...meshes.ghosts, ...meshes.clips]) {
+    const w = new THREE2.Mesh(m.geometry, matWire);
+    w.visible = !!P.wireframe;
+    w.userData.of = m;
+    asm.add(w);
+    meshes.wires.push(w);
+  }
+  applyEngage();
+  updatePlate();
+}
+function applyEngage() {
+  const e = P.slideEngage / 100;
+  for (const g of meshes.ghosts) {
+    const nb = g.userData.nb, off = engageOffset(model, nb, e);
+    g.position.set(nb.tx + off.dx, (nb.ty || 0) + off.dy, nb.tz + off.dz);
+    g.rotation.set(0, -nb.rot, 0);
+  }
+  for (const m of meshes.clips) {
+    const c = m.userData.place, off = engageOffset(model, { side: 0 }, e);
+    m.position.set(c.x, c.y + (off.clipDy || 0), c.z);
+    m.rotation.set(0, Math.atan2(Math.cos(c.ang), Math.sin(c.ang)), 0);
+  }
+  for (const w of meshes.wires) {
+    const o = w.userData.of;
+    w.position.copy(o.position);
+    w.rotation.copy(o.rotation);
+  }
+  $("#engageV").textContent = `${Math.round(P.slideEngage)}%`;
+  updateCut();
+}
+function asmBox(locked = false) {
+  const box = new THREE2.Box3();
+  const add = (m, pos, rotY) => {
+    const b = m.geometry.boundingBox.clone();
+    const M = new THREE2.Matrix4().compose(pos, new THREE2.Quaternion().setFromAxisAngle(new THREE2.Vector3(0, 1, 0), rotY), new THREE2.Vector3(1, 1, 1));
+    box.union(b.applyMatrix4(M));
+  };
+  if (meshes.unit) add(meshes.unit, new THREE2.Vector3(), 0);
+  for (const g of meshes.ghosts) {
+    const nb = g.userData.nb;
+    if (locked) add(g, new THREE2.Vector3(nb.tx, nb.ty || 0, nb.tz), -nb.rot);
+    else add(g, g.position, g.rotation.y);
+  }
+  return box;
+}
+function updatePlate() {
+  const box = asmBox(true), size = box.getSize(new THREE2.Vector3());
+  const span = Math.max(240, Math.ceil(Math.max(size.x, size.z) * 1.8 / 20) * 20);
+  plate.scale.set(span * 2, span * 2, 1);
+  const c = box.getCenter(new THREE2.Vector3());
+  plate.position.set(c.x, -0.02, c.z);
+  if (grid) {
+    scene.remove(grid);
+    grid.geometry.dispose();
+    grid.material.dispose();
+  }
+  const dark = view.theme === "dark";
+  grid = new THREE2.GridHelper(span, span / 10, dark ? 4869202 : 11775391, dark ? 2500652 : 14209991);
+  grid.position.set(Math.round(c.x / 10) * 10, 0, Math.round(c.z / 10) * 10);
+  grid.material.transparent = true;
+  grid.material.opacity = dark ? 0.9 : 1;
+  grid.visible = !!P.showGrid;
+  scene.add(grid);
+  const r = Math.max(size.x, size.z, size.y) * 1.2 + 60;
+  sun.shadow.camera.left = -r;
+  sun.shadow.camera.right = r;
+  sun.shadow.camera.top = r;
+  sun.shadow.camera.bottom = -r;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 2e3;
+  sun.shadow.camera.updateProjectionMatrix();
+  sun.position.set(c.x + 180, 320 + size.y, c.z + 140);
+  sun.target.position.copy(c);
+}
+function updateMaterials() {
+  for (const m of [matUnit, matGhostSolid]) {
+    m.roughness = P.roughness;
+    m.metalness = P.metalness;
+    m.clearcoat = P.clearcoat;
+    m.clearcoatRoughness = 0.5;
+    if (m.flatShading !== !!P.flatShading) {
+      m.flatShading = !!P.flatShading;
+      m.needsUpdate = true;
+    }
+  }
+  matGhost.opacity = P.ghostOpacity;
+  matGhost.roughness = 0.35;
+  matGhost.metalness = 0;
+  matGhost.clearcoat = 0.3;
+  if (matGhost.flatShading !== !!P.flatShading) {
+    matGhost.flatShading = !!P.flatShading;
+    matGhost.needsUpdate = true;
+  }
+  matClip.roughness = P.roughness;
+  matClip.metalness = P.metalness;
+  if (unitGeo) paint(unitGeo);
+  for (const w of meshes.wires) w.visible = !!P.wireframe;
+  if (grid) grid.visible = !!P.showGrid;
+  controls.autoRotate = !!P.autoRotate;
+  sun.castShadow = view.shadow;
+  plate.visible = view.shadow;
+  syncToggles();
+}
+function updateCut() {
+  const on = view.cut !== "off";
+  const mats = [matUnit, matGhost, matGhostSolid, matClip, matWire];
+  for (const m of mats) {
+    m.clippingPlanes = on ? [cutPlane] : [];
+    const side = on && m !== matWire ? THREE2.DoubleSide : THREE2.FrontSide;
+    if (m.side !== side) {
+      m.side = side;
+      m.needsUpdate = true;
+    }
+  }
+  matUnit.userData.cap.value.set("#3aa0e0").convertLinearToSRGB();
+  if (on && meshes.unit) {
+    const box = asmBox(false), f = view.cutPos / 100;
+    if (view.cut === "y") {
+      cutPlane.normal.set(0, -1, 0);
+      cutPlane.constant = box.min.y + (box.max.y - box.min.y) * f;
+    }
+    if (view.cut === "x") {
+      cutPlane.normal.set(-1, 0, 0);
+      cutPlane.constant = box.min.x + (box.max.x - box.min.x) * f;
+    }
+    if (view.cut === "z") {
+      cutPlane.normal.set(0, 0, -1);
+      cutPlane.constant = box.min.z + (box.max.z - box.min.z) * f;
+    }
+  }
+  updateClearance();
+}
+function updateClearance() {
+  lastClr = null;
+  const C = model && model.C;
+  if (!C || C.yJ0 === void 0 || !nbs.some((n) => n.side >= 0)) {
+    updateHUD();
+    return;
+  }
+  const y = view.cut === "y" ? cutPlane.constant : (C.yJ0 + C.yJ1) / 2;
+  if (y > 0 && y < C.H) lastClr = clearanceAt(model, nbs, y);
+  if (lastClr) lastClr.atCut = view.cut === "y";
+  updateHUD();
+}
+var fmt = (v, d = 1) => isFinite(v) ? v.toFixed(d) : "\u2014";
+function updateHUD() {
+  if (!model) return;
+  const s = model.stats, C = model.C;
+  const man = s.manifold.ok ? `<span class="ok">closed \u2713</span>` : `<span class="bad">open edges ${s.manifold.open}</span>`;
+  let clr = "";
+  if (lastClr) {
+    const ok = !lastClr.interf;
+    const mode = C.polarity === "all-female-clip" ? "socket wall gap" : "pin \u2194 socket";
+    clr = `<dt>Joint clearance</dt><dd class="${ok ? "ok" : "bad"}">${ok ? fmt(lastClr.minGap, 3) + " mm" : "interference \u2717"}</dd>
+           <dt>${lastClr.atCut ? "Section" : "Probe"} y</dt><dd>${fmt(lastClr.y, 1)} mm \xB7 ${mode}</dd>`;
+  }
+  let strain = "";
+  if (s.strain !== void 0) strain = `<dt>Snap strain</dt><dd class="${s.strainWarn ? "warn" : "ok"}">${fmt(s.strain, 2)} %</dd>`;
+  const warns = [...model.warnings];
+  if (s.strainWarn) warns.unshift(s.strainWarn);
+  const html = `<h3><span>Engineering HUD</span><button id="hudMin" aria-label="Collapse HUD">${hudMin ? "+" : "\u2013"}</button></h3>
+  <dl>
+    <dt>Footprint</dt><dd>${fmt(s.bbox[0])} \xD7 ${fmt(s.bbox[1])} \xD7 ${fmt(s.bbox[2])} mm</dd>
+    <dt>Grid pitch</dt><dd>${s.pitch.label}</dd>
+    <dt>Material</dt><dd>${fmt(s.volume / 1e3, 1)} cm\xB3 \xB7 ${fmt(s.mass, 0)} g</dd>
+    <dt>Capacity</dt><dd>${fmt(s.capacity, 0)} ml</dd>
+    ${clr}${strain}
+    <dt>Mesh</dt><dd>${(s.tris / 1e3).toFixed(1)}k tris \xB7 ${man}</dd>
+    <dt>Rebuild</dt><dd>${fmt(s.ms, 0)} ms</dd>
+  </dl>
+  ${warns.length ? `<ul>${warns.map((w) => `<li>${w.replace(/^⚠\s*/, "")}</li>`).join("")}</ul>` : ""}`;
+  const hud = $("#hud");
+  hud.innerHTML = html;
+  hud.classList.toggle("min", hudMin);
+  $("#hudMobile").innerHTML = `<div class="hud">${html}</div>`;
+  for (const b of $$("#hudMin")) b.onclick = () => {
+    hudMin = !hudMin;
+    updateHUD();
+  };
+  const lg = $("#legend");
+  lg.innerHTML = view.cut !== "off" && nbs.length ? `<span><i style="background:#3aa0e0"></i>socket unit</span><span><i style="background:#e0603a"></i>pin unit</span><span>gap = dark</span>` : `<span><i style="background:${P.colorPrimary}"></i>body</span>${P.colorJoint ? `<span><i style="background:${P.colorMale}"></i>male</span><span><i style="background:${P.colorFemale}"></i>female</span>` : ""}${nbs.length && P.ghostOpacity < 0.99 ? `<span><i style="background:#4ea8de"></i>neighbour</span>` : ""}`;
+}
+var hudMin = false;
+var ctrls = {};
+function buildUI() {
+  const host = $("#groups");
+  host.innerHTML = "";
+  SCHEMA.forEach((g, gi) => {
+    const det = document.createElement("details");
+    det.className = "group";
+    det.open = !!g.open;
+    det.dataset.gid = g.id;
+    det.innerHTML = `<summary><span class="idx">${String(gi + 1).padStart(2, "0")}</span>${g.title}<span class="chev"></span></summary>`;
+    const rows = document.createElement("div");
+    rows.className = "rows";
+    det.appendChild(rows);
+    for (const p of g.params) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.dataset.key = p.key;
+      const id = "p-" + p.key;
+      if (p.type === "range") {
+        row.innerHTML = `<div class="top"><label class="lbl" for="${id}">${p.label}</label><input class="num" type="number" min="${p.min}" max="${p.max}" step="${p.step}" aria-label="${p.label} value"><span class="unit">${p.unit || ""}</span></div>
+          <input id="${id}" type="range" min="${p.min}" max="${p.max}" step="${p.step}"><div class="hint"></div>`;
+        const r = row.querySelector("input[type=range]"), n = row.querySelector(".num");
+        r.addEventListener("input", () => setParam(p.key, +r.value, true));
+        r.addEventListener("change", () => setParam(p.key, +r.value, false));
+        n.addEventListener("change", () => setParam(p.key, Math.min(p.max, Math.max(p.min, +n.value || p.min)), false));
+        ctrls[p.key] = { row, r, n, p: PBY[p.key] };
+      } else if (p.type === "select") {
+        row.innerHTML = `<div class="top"><label class="lbl" for="${id}">${p.label}</label></div><select id="${id}">${p.options.map((o) => `<option value="${o}">${o}</option>`).join("")}</select><div class="hint"></div>`;
+        const sel = row.querySelector("select");
+        sel.addEventListener("change", () => setParam(p.key, sel.value, false));
+        ctrls[p.key] = { row, sel, p: PBY[p.key] };
+      } else if (p.type === "check") {
+        row.innerHTML = `<div class="top"><label class="lbl" for="${id}">${p.label}</label><label class="switch"><input id="${id}" type="checkbox"><span></span></label></div>`;
+        const cb = row.querySelector("input");
+        cb.addEventListener("change", () => setParam(p.key, cb.checked, false));
+        ctrls[p.key] = { row, cb, p: PBY[p.key] };
+      } else if (p.type === "color") {
+        row.innerHTML = `<div class="top"><label class="lbl" for="${id}">${p.label}</label><input id="${id}" type="color"></div>`;
+        const ci = row.querySelector("input");
+        ci.addEventListener("input", () => setParam(p.key, ci.value, true));
+        ctrls[p.key] = { row, ci, p: PBY[p.key] };
+      }
+      rows.appendChild(row);
+    }
+    host.appendChild(det);
+  });
+  const ps = $("#presetSel");
+  ps.innerHTML = `<option value="">\u2014 custom \u2014</option>` + Object.keys(PRESETS).map((k) => `<option>${k}</option>`).join("");
+  ps.value = "Hex Honeycomb Dovetail";
+  ps.addEventListener("change", () => {
+    if (PRESETS[ps.value]) {
+      P = { ...PRESETS[ps.value] };
+      syncUI();
+      rebuild();
+      fitCamera("iso");
+    }
+  });
+  const as = $("#asmSel");
+  as.innerHTML = PBY.assemblyMode.options.map((o) => `<option value="${o}">${o}</option>`).join("");
+  as.addEventListener("change", () => setParam("assemblyMode", as.value, false));
+  const en = $("#engage");
+  en.addEventListener("input", () => setParam("slideEngage", +en.value, true));
+}
+function syncUI() {
+  for (const k in ctrls) {
+    const c = ctrls[k], v = P[k];
+    if (c.r) {
+      c.r.value = v;
+      c.n.value = +(+v).toFixed(3);
+      c.r.style.setProperty("--p", `${(v - c.p.min) / (c.p.max - c.p.min) * 100}%`);
+    }
+    if (c.sel) c.sel.value = v;
+    if (c.cb) c.cb.checked = !!v;
+    if (c.ci) c.ci.value = v;
+    const show = (!c.p.group.show || c.p.group.show(P)) && (!c.p.show || c.p.show(P));
+    c.row.classList.toggle("hide", !show);
+    const h = c.row.querySelector(".hint");
+    if (h) h.textContent = c.p.hint ? c.p.hint(P) : "";
+  }
+  for (const det of $$("details.group")) {
+    const g = SCHEMA.find((x) => x.id === det.dataset.gid);
+    det.style.display = g.show && !g.show(P) ? "none" : "";
+  }
+  $("#asmSel").value = P.assemblyMode;
+  $("#engage").value = P.slideEngage;
+  $("#engage").style.setProperty("--p", `${P.slideEngage}%`);
+  syncToggles();
+}
+function syncToggles() {
+  for (const b of $$("[data-tog]")) {
+    const k = b.dataset.tog;
+    b.classList.toggle("on", k === "shadow" ? view.shadow : !!P[k]);
+  }
+  for (const b of $$("[data-cut]")) b.classList.toggle("on", b.dataset.cut === view.cut);
+  for (const b of $$("[data-cam]")) b.classList.toggle("on", b.dataset.cam === lastCam);
+  $("#themeBtn").textContent = view.theme === "dark" ? "Light" : "Dark";
+}
+var rebuildRaf = 0;
+var pendingPreview = false;
+function scheduleRebuild(preview) {
+  pendingPreview = preview;
+  $("#busy").classList.add("on");
+  if (rebuildRaf) return;
+  rebuildRaf = requestAnimationFrame(() => {
+    rebuildRaf = 0;
+    rebuild(pendingPreview);
+    $("#busy").classList.remove("on");
+  });
+}
+function setParam(key, value, live) {
+  const p = PBY[key];
+  P[key] = value;
+  if (p.type !== "color" && p.type !== "check") $("#presetSel").value = Object.keys(PRESETS).find((k) => JSON.stringify(PRESETS[k]) === JSON.stringify(P)) || "";
+  syncUI();
+  if (key === "slideEngage") {
+    applyEngage();
+    return;
+  }
+  if (key === "assemblyMode" || key === "ghostOpacity" && value >= 0.99 !== (meshes.ghosts[0] && meshes.ghosts[0].material === matGhostSolid)) {
+    layoutAssembly();
+    updateMaterials();
+    updateHUD();
+    return;
+  }
+  if (key === "exportTarget") {
+    updateExportHint();
+    return;
+  }
+  if (p.live) {
+    updateMaterials();
+    updateHUD();
+    return;
+  }
+  scheduleRebuild(live);
+}
+var lastCam = "iso";
+function fitCamera(kind = lastCam) {
+  lastCam = kind;
+  const box = asmBox(true), c = box.getCenter(new THREE2.Vector3()), size = box.getSize(new THREE2.Vector3());
+  const r = Math.max(size.length() * 0.5, 30);
+  const vf = THREE2.MathUtils.degToRad(camera.fov / 2), hf = Math.atan(Math.tan(vf) * Math.max(camera.aspect, 0.3));
+  const d = r / Math.sin(Math.min(vf, hf)) * 1.05;
+  const dir = { front: [0, 0.12, 1], side: [1, 0.12, 0], top: [0, 1, 1e-4], iso: [0.85, 0.75, 1] }[kind];
+  if (kind === "iso" && nbs.length && !nbs[0].stack) {
+    let cx = 0, cz = 0;
+    for (const nb of nbs) {
+      cx += nb.tx;
+      cz += nb.tz;
+    }
+    const a = Math.atan2(-cz, -cx) + 0.7;
+    dir[0] = Math.cos(a);
+    dir[2] = Math.sin(a);
+    dir[1] = 0.85;
+  }
+  const v = new THREE2.Vector3(...dir).normalize().multiplyScalar(d);
+  camera.position.copy(c).add(v);
+  controls.target.copy(c);
+  camera.near = Math.max(0.5, d / 200);
+  camera.far = d * 20;
+  camera.updateProjectionMatrix();
+  controls.update();
+  syncToggles();
+}
+function applyTheme() {
+  document.documentElement.dataset.theme = view.theme;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--viewport").trim();
+  scene.background = new THREE2.Color(bg);
+  matWire.color.set(view.theme === "dark" ? 0 : 2761752);
+  hemi.intensity = view.theme === "dark" ? 0.55 : 0.8;
+  try {
+    localStorage.setItem("tl-theme", view.theme);
+  } catch (e) {
+  }
+  updatePlate();
+  syncToggles();
+}
+var today = () => {
+  const d = /* @__PURE__ */ new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+var fname = (ext) => `tessellalock-${P.baseShape}-${P.jointType}-${today()}.${ext}`;
+function updateExportHint() {
+  const t = P.exportTarget, ok = t !== "dogbone-clip-only" || !!model?.clip;
+  $("#fnameHint").textContent = ok ? t : "no clip in this mode";
+}
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("on"), 2200);
+}
+function download(data, name, type) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4e3);
+}
+function exportGeometry() {
+  const parts = [];
+  const t = P.exportTarget;
+  if (t === "dogbone-clip-only") {
+    if (!clipGeo) return null;
+    const g = clipGeo.clone();
+    g.rotateX(0);
+    parts.push(g);
+  } else {
+    parts.push(unitGeo.clone());
+    if (t === "full-assembly") {
+      for (const m of [...meshes.ghosts, ...meshes.clips]) {
+        const g = m.geometry.clone();
+        if (m.material === matClip) paint(g, 1);
+        else paint(g);
+        m.updateMatrix();
+        g.applyMatrix4(m.matrix);
+        parts.push(g);
+      }
+    }
+  }
+  let n = 0;
+  for (const g of parts) n += g.attributes.position.count;
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+  let o = 0;
+  for (const g of parts) {
+    pos.set(g.attributes.position.array, o);
+    nor.set(g.attributes.normal.array, o);
+    col.set(g.attributes.color.array, o);
+    o += g.attributes.position.array.length;
+    g.dispose();
+  }
+  const G = new THREE2.BufferGeometry();
+  G.setAttribute("position", new THREE2.BufferAttribute(pos, 3));
+  G.setAttribute("normal", new THREE2.BufferAttribute(nor, 3));
+  G.setAttribute("color", new THREE2.BufferAttribute(col, 3));
+  return G;
+}
+function stlData() {
+  const G = exportGeometry();
+  if (!G) return null;
+  G.rotateX(Math.PI / 2);
+  const m = new THREE2.Mesh(G, new THREE2.MeshBasicMaterial());
+  m.name = "tessellalock";
+  const out = new STLExporter().parse(m, { binary: true });
+  G.dispose();
+  return out;
+}
+function exportIndexed() {
+  const items = [], t = P.exportTarget;
+  if (t === "dogbone-clip-only") {
+    if (!model.clip) return null;
+    items.push([model.clip, new THREE2.Matrix4(), 1]);
+  } else {
+    items.push([model.mesh, new THREE2.Matrix4(), -1]);
+    if (t === "full-assembly") {
+      for (const m of meshes.ghosts) {
+        m.updateMatrix();
+        items.push([model.mesh, m.matrix.clone(), -1]);
+      }
+      for (const m of meshes.clips) {
+        m.updateMatrix();
+        items.push([model.clip, m.matrix.clone(), 1]);
+      }
+    }
+  }
+  let nv = 0, ni = 0;
+  for (const [m] of items) {
+    nv += m.pos.length / 3;
+    ni += m.idx.length;
+  }
+  const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), index = new Uint32Array(ni);
+  const cols = tagColors(), v = new THREE2.Vector3();
+  let vo = 0, io = 0;
+  for (const [m, M, forced] of items) {
+    const n = m.pos.length / 3, vt = new Uint8Array(n);
+    for (let i = 0; i < m.idx.length; i++) {
+      const tg = forced >= 0 ? forced : m.tag[i / 3 | 0];
+      if (tg > vt[m.idx[i]]) vt[m.idx[i]] = tg;
+      index[io + i] = m.idx[i] + vo;
+    }
+    for (let i = 0; i < n; i++) {
+      v.set(m.pos[3 * i], m.pos[3 * i + 1], m.pos[3 * i + 2]).applyMatrix4(M);
+      pos[3 * (vo + i)] = v.x;
+      pos[3 * (vo + i) + 1] = v.y;
+      pos[3 * (vo + i) + 2] = v.z;
+      const c = cols[vt[i]] || cols[0];
+      col[3 * (vo + i)] = c.r;
+      col[3 * (vo + i) + 1] = c.g;
+      col[3 * (vo + i) + 2] = c.b;
+    }
+    vo += n;
+    io += m.idx.length;
+  }
+  const G = new THREE2.BufferGeometry();
+  G.setAttribute("position", new THREE2.BufferAttribute(pos, 3));
+  G.setAttribute("color", new THREE2.BufferAttribute(col, 3));
+  G.setIndex(new THREE2.BufferAttribute(index, 1));
+  return G;
+}
+function objData() {
+  const G = exportIndexed();
+  if (!G) return null;
+  const m = new THREE2.Mesh(G, new THREE2.MeshStandardMaterial({ vertexColors: true }));
+  m.name = "tessellalock";
+  let txt = new OBJExporter().parse(m);
+  const col = G.attributes.color.array, c = new THREE2.Color();
+  let vi = 0;
+  txt = txt.replace(/^v (.+)$/gm, (line, rest) => {
+    c.setRGB(col[3 * vi], col[3 * vi + 1], col[3 * vi + 2]).convertLinearToSRGB();
+    vi++;
+    return `v ${rest} ${c.r.toFixed(4)} ${c.g.toFixed(4)} ${c.b.toFixed(4)}`;
+  });
+  G.dispose();
+  return `# TessellaLock Studio 3D \u2014 ${P.baseShape} / ${P.jointType} / ${P.polarityMode}
+# units: mm, Y-up; vertex colours: body / male / female
+` + txt;
+}
+function glbData() {
+  return new Promise((res, rej) => {
+    const G = exportGeometry();
+    if (!G) return res(null);
+    G.scale(1e-3, 1e-3, 1e-3);
+    const m = new THREE2.Mesh(G, new THREE2.MeshStandardMaterial({ vertexColors: true, roughness: P.roughness, metalness: P.metalness }));
+    m.name = "TessellaLock";
+    new GLTFExporter().parse(m, (r) => {
+      G.dispose();
+      res(r);
+    }, rej, { binary: true });
+  });
+}
+function pngData() {
+  return new Promise((res) => {
+    const w0 = canvas.clientWidth, h0 = canvas.clientHeight, pr0 = renderer.getPixelRatio();
+    const W = 2048, H = Math.round(2048 * Math.max(0.5, Math.min(1.5, h0 / w0)));
+    const bg = scene.background, gv = grid && grid.visible, pv = plate.visible;
+    scene.background = null;
+    if (grid) grid.visible = false;
+    plate.visible = false;
+    renderer.setPixelRatio(1);
+    renderer.setSize(W, H, false);
+    renderer.setClearColor(0, 0);
+    camera.aspect = W / H;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    canvas.toBlob((b) => {
+      scene.background = bg;
+      if (grid) grid.visible = gv;
+      plate.visible = pv;
+      renderer.setPixelRatio(pr0);
+      resize();
+      res(b);
+    }, "image/png");
+  });
+}
+function jsonData() {
+  const out = { app: "TessellaLock Studio 3D", version: 1, date: today(), params: P };
+  return JSON.stringify(out, null, 2);
+}
+function guideText() {
+  const s = model.stats, C = model.C, f = P.filamentPreset;
+  const temps = { "PLA (Stiff)": "200\u2013215 \xB0C nozzle / 60 \xB0C bed", "PETG (Recommended for Snap)": "230\u2013245 \xB0C / 75\u201385 \xB0C", "ABS / ASA": "245\u2013260 \xB0C / 100 \xB0C, enclosure", "TPU (Flex)": "220\u2013235 \xB0C / 50 \xB0C, slow 20\u201330 mm/s" }[f];
+  const efc = P.elephantChamfer >= 0.4 ? "0.00 mm (the model already carries a " + P.elephantChamfer.toFixed(1) + " mm bottom chamfer)" : "0.15\u20130.20 mm (model chamfer is small)";
+  const L = [];
+  L.push("TESSELLALOCK STUDIO 3D \u2014 PRINT GUIDE", "=".repeat(40), `Generated ${today()}`, "");
+  L.push("PART", `  Shape .............. ${P.baseShape}${P.baseShape === "multigon" ? " (" + C.N + " sides)" : ""}`, `  Footprint .......... ${s.bbox[0].toFixed(1)} x ${s.bbox[1].toFixed(1)} x ${s.bbox[2].toFixed(1)} mm`, `  Grid pitch ......... ${s.pitch.label}`, `  Locking ............ ${P.jointType} / ${C.polarity}`, `  Material ........... ${(s.volume / 1e3).toFixed(1)} cm3, approx. ${s.mass.toFixed(0)} g of ${f} (${s.density} g/cm3, 100% solid estimate)`, `  Capacity ........... ${s.capacity.toFixed(0)} ml`, `  Mesh ............... ${s.tris} triangles, ${s.manifold.ok ? "watertight" : "NOT watertight"}, ${s.manifold.shells} shell(s)`, "");
+  L.push("SLICER SETTINGS", "  Layer height ....... 0.20 mm (0.12\u20130.16 mm for finer joints)", "  Walls / perimeters . >= 3 (4 recommended for snap-fits)", "  Top/bottom layers .. >= 4", "  Infill ............. 15\u201325 % gyroid", `  Elephant-foot comp.  ${efc}`, "  Supports ........... NONE \u2014 all joint overhangs are tapered to " + P.overhangAngle + "\xB0", `  Temperatures ....... ${temps}`, "  Orientation ........ as exported (STL is Z-up, floor on the bed)", "");
+  L.push("FIT & TOLERANCES", `  XY clearance ....... ${P.clearance.toFixed(2)} mm per contact face (male -\u03B4/2, female +\u03B4/2)`, `  Z clearance ........ ${P.zClearance.toFixed(2)} mm`, `  Lead-in bevel ...... ${P.leadInChamfer.toFixed(1)} mm`, "  Tip: print a pair first. Too tight -> raise clearance by 0.05 mm; loose -> lower it.", "");
+  if (C.polarity === "hermaphroditic") L.push("ASSEMBLY", "  Every unit is identical. Rotate one unit 180\xB0 and face any active wall to another;", C.sliding ? "  slide the neighbour down from above until both rest on the table." : "  push the walls together until the connectors lock.", "");
+  if (C.polarity === "alternating") L.push("ASSEMBLY", "  Male walls face female walls of the next unit (translated copy, same orientation).", C.sliding ? "  Lower the unit carrying the male rail into the open-top female slot until it hits the stop ledge." : "", "");
+  if (C.polarity === "all-female-clip") L.push("ASSEMBLY", '  All walls are female. Print the double-male dogbone clips (export target "dogbone-clip-only")', `  \u2014 ${C.sides.reduce((a, s2) => a + s2.length, 0)} slot(s) per unit; one clip joins two units.`, "");
+  if (P.exportTarget === "full-assembly") L.push("FULL-ASSEMBLY EXPORT", "  Units are exported in their assembled positions; neighbouring flat walls touch exactly.", "  For batch printing, spread the parts apart in the slicer (or export single units).", "");
+  if (C.stack) L.push("STACKING", `  Rim height ${C.hl.toFixed(1)} mm: the bottom plug of the upper unit drops into the top of the lower unit.`, "");
+  if (C.mag) {
+    const nMag = C.sides.reduce((a, s2) => a + s2.length, 0) * C.mag.rows;
+    L.push("MAGNETS", `  Size ............... \xD8${P.magDiameter} x ${P.magThickness} mm neodymium discs (N35\u2013N52)`, `  Quantity ........... ${nMag} per unit (${C.mag.rows} per slot)`, `  Pocket ............. \xD8${C.mag.Dm.toFixed(2)} x ${C.mag.Tm.toFixed(2)} mm, wall skin ${P.magWallSkin} mm`, `  Insertion .......... ${P.magInsertStyle}${P.magInsertStyle === "embedded-pause" ? " \u2014 add a pause in the slicer at the layer just above the pocket roof start" : P.magInsertStyle === "top-drop-slot" ? " \u2014 drop magnets in from the top rim; a 0.25 mm detent lip holds them" : " \u2014 press magnets into the side pockets (a drop of CA glue helps)"}`, "  Polarity ........... slots marked orange = NORTH facing out, blue = SOUTH facing out", "                       (identical units then always attract).", "");
+  }
+  if (s.strain !== void 0) L.push("SNAP-FIT", `  Estimated beam strain ${s.strain.toFixed(2)} % (\u03B5 \u2248 3\xB7t\xB7h / 2L\xB2)${s.strainWarn ? " \u2014 " + s.strainWarn : ""}`, "");
+  if (model.warnings.length) L.push("NOTES", ...model.warnings.map((w) => "  - " + w.replace(/^⚠\s*/, "")), "");
+  return L.join("\n");
+}
+async function doExport(kind) {
+  try {
+    if (P.exportTarget === "dogbone-clip-only" && !clipGeo && ["stl", "obj", "glb", "zip"].includes(kind)) {
+      toast('No dogbone clip: choose polarity "all-female-clip" with a sliding joint');
+      return;
+    }
+    if (kind === "stl") download(stlData(), fname("stl"), "model/stl");
+    if (kind === "obj") download(objData(), fname("obj"), "text/plain");
+    if (kind === "glb") download(await glbData(), fname("glb"), "model/gltf-binary");
+    if (kind === "png") download(await pngData(), fname("png"), "image/png");
+    if (kind === "json") download(jsonData(), fname("json"), "application/json");
+    if (kind === "zip") {
+      toast("Packing\u2026");
+      const png = new Uint8Array(await (await pngData()).arrayBuffer());
+      const files = {
+        [fname("stl")]: new Uint8Array(stlData().buffer),
+        [fname("obj")]: strToU8(objData()),
+        [fname("glb")]: new Uint8Array(await glbData()),
+        [fname("png")]: png,
+        [fname("json")]: strToU8(jsonData()),
+        "PRINT_GUIDE.txt": strToU8(guideText())
+      };
+      download(new Blob([zipSync(files, { level: 6 })], { type: "application/zip" }), fname("zip"));
+    }
+    toast(`Exported ${kind.toUpperCase()}`);
+  } catch (e) {
+    console.error(e);
+    toast("Export failed: " + e.message);
+  }
+}
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe($("#view"));
+for (const b of $$("[data-cam]")) b.onclick = () => fitCamera(b.dataset.cam);
+for (const b of $$("[data-tog]")) b.onclick = () => {
+  const k = b.dataset.tog;
+  if (k === "shadow") {
+    view.shadow = !view.shadow;
+    updateMaterials();
+    return;
+  }
+  setParam(k, !P[k], false);
+};
+for (const b of $$("[data-cut]")) b.onclick = () => {
+  const was = view.cut !== "off";
+  view.cut = b.dataset.cut;
+  if (was !== (view.cut !== "off")) layoutAssembly();
+  else updateCut();
+  syncToggles();
+  updateHUD();
+};
+$("#cutPos").addEventListener("input", (e) => {
+  view.cutPos = +e.target.value;
+  updateCut();
+});
+$("#themeBtn").onclick = () => {
+  view.theme = view.theme === "dark" ? "light" : "dark";
+  applyTheme();
+};
+for (const b of $$("[data-exp]")) b.onclick = () => doExport(b.dataset.exp);
+$("#loadBtn").onclick = () => $("#loadFile").click();
+$("#loadFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const j = JSON.parse(await f.text()), src = j.params || j;
+    const next = { ...DEFAULTS };
+    for (const k of Object.keys(DEFAULTS)) if (k in src && typeof src[k] === typeof DEFAULTS[k]) next[k] = src[k];
+    P = next;
+    syncUI();
+    rebuild();
+    fitCamera("iso");
+    toast("Preset loaded");
+  } catch (err) {
+    toast("Invalid JSON preset");
+  }
+  e.target.value = "";
+});
+function loop() {
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+buildUI();
+syncUI();
+applyTheme();
+resize();
+rebuild();
+updateMaterials();
+fitCamera("iso");
+loop();
+window.__tl = { get P() {
+  return P;
+}, get model() {
+  return model;
+}, rebuild, setParam, doExport, view, updateCut, fitCamera, guideText, camera, controls };
+</script>
+</body>
+</html>
