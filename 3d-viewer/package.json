@@ -1,0 +1,21 @@
+{
+  "name": "ruang3d-viewer",
+  "version": "1.0.0",
+  "description": "Penampil model 3D multi-file di browser",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "online-3d-viewer": "^0.18.0",
+    "three": "^0.176.0"
+  },
+  "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
+    "esbuild": "^0.24.0"
+  },
+  "private": true,
+  "type": "module"
+}
