@@ -1,0 +1,19 @@
+{
+  "name": "vase-studio",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@fontsource/bricolage-grotesque": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/ibm-plex-sans": "^5.1.0",
+    "esbuild": "^0.24.0",
+    "three": "^0.160.0"
+  },
+  "private": true,
+  "type": "module"
+}

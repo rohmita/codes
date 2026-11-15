@@ -1,0 +1,849 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { zipSync, strToU8 } from 'three/addons/libs/fflate.module.js';
+
+/* ------------------------------------------------------------------ *
+ *  Parameter schema (70+ controls)
+ * ------------------------------------------------------------------ */
+const G = (name, note, params) => ({ name, note, params });
+const R = (key, label, min, max, step, value, unit = '') => ({ type: 'range', key, label, min, max, step, value, unit });
+const C = (key, label, value) => ({ type: 'check', key, label, value });
+const S = (key, label, options, value) => ({ type: 'select', key, label, options, value });
+const K = (key, label, value) => ({ type: 'color', key, label, value });
+
+const SCHEMA = [
+  G('Dimensions', 'mm', [
+    R('height', 'Height', 40, 400, 1, 180, 'mm'),
+    R('bottomRadius', 'Bottom radius', 10, 150, 0.5, 40, 'mm'),
+    R('topRadius', 'Top radius', 5, 150, 0.5, 32, 'mm'),
+    R('taperCurve', 'Taper curve', 0.2, 4, 0.05, 1, '^'),
+    R('wallThickness', 'Wall thickness', 0.8, 10, 0.1, 2.4, 'mm'),
+    R('baseThickness', 'Base thickness', 0.8, 15, 0.1, 3, 'mm'),
+  ]),
+  G('Profile', 'silhouette', [
+    R('bellyAmount', 'Belly bulge', -40, 80, 0.5, 28, 'mm'),
+    R('bellyPos', 'Belly position', 0, 1, 0.01, 0.35),
+    R('bellyWidth', 'Belly width', 0.05, 0.6, 0.01, 0.22),
+    R('neckAmount', 'Neck pinch', 0, 60, 0.5, 14, 'mm'),
+    R('neckPos', 'Neck position', 0, 1, 0.01, 0.78),
+    R('neckWidth', 'Neck width', 0.03, 0.5, 0.01, 0.12),
+    R('lipFlare', 'Lip flare', -20, 40, 0.5, 8, 'mm'),
+    R('lipHeight', 'Lip height', 0, 0.4, 0.01, 0.12),
+    R('footFlare', 'Foot flare', -20, 30, 0.5, 0, 'mm'),
+    R('footHeight', 'Foot height', 0, 0.3, 0.01, 0.06),
+  ]),
+  G('Cross-section', 'shape of each ring', [
+    R('sides', 'Polygon sides (0 = round)', 0, 12, 1, 0),
+    R('polyBlend', 'Polygon strength', 0, 1, 0.01, 1),
+    R('polyRotate', 'Polygon rotation', 0, 180, 1, 0, '°'),
+    R('stretchX', 'Stretch X', 0.3, 2, 0.01, 1, '×'),
+    R('stretchZ', 'Stretch Z', 0.3, 2, 0.01, 1, '×'),
+  ]),
+  G('Rotate extrude', 'twist', [
+    R('twist', 'Twist angle', -720, 720, 1, 0, '°'),
+    R('twistCurve', 'Twist easing', 0.2, 4, 0.05, 1, '^'),
+    R('twistWaveAmp', 'Twist wave amount', 0, 90, 1, 0, '°'),
+    R('twistWaveFreq', 'Twist wave frequency', 0, 8, 0.1, 1),
+  ]),
+  G('Linear extrude', 'scale & offset', [
+    R('topScale', 'Top scale', 0.2, 3, 0.01, 1, '×'),
+    R('leanX', 'Lean X', -100, 100, 0.5, 0, 'mm'),
+    R('leanZ', 'Lean Z', -100, 100, 0.5, 0, 'mm'),
+    R('leanCurve', 'Lean / bend curve', 0.5, 4, 0.05, 2, '^'),
+    R('wobbleAmp', 'Wobble amount', 0, 30, 0.5, 0, 'mm'),
+    R('wobbleFreq', 'Wobble frequency', 0, 8, 0.1, 1),
+  ]),
+  G('Surface texture', 'ribs, spirals, waves', [
+    R('ribCount', 'Vertical ribs', 0, 64, 1, 0),
+    R('ribDepth', 'Rib depth', 0, 15, 0.1, 3, 'mm'),
+    R('ribSharp', 'Rib sharpness', 0.2, 8, 0.1, 1),
+    R('spiralCount', 'Spiral ridges', 0, 48, 1, 0),
+    R('spiralTurns', 'Spiral turns', -4, 4, 0.05, 1),
+    R('spiralDepth', 'Spiral depth', 0, 12, 0.1, 2, 'mm'),
+    R('spiralSharp', 'Spiral sharpness', 0.2, 8, 0.1, 1),
+    C('crossHatch', 'Cross-hatch (knurled diamonds)', false),
+    R('waveCount', 'Horizontal waves', 0, 30, 0.5, 0),
+    R('waveDepth', 'Wave depth', 0, 12, 0.1, 2, 'mm'),
+    R('wavePhase', 'Wave phase', 0, 360, 1, 0, '°'),
+    R('noiseAmt', 'Organic noise', 0, 12, 0.1, 0, 'mm'),
+    R('noiseScale', 'Noise scale', 0.5, 12, 0.1, 3),
+    R('noiseSeed', 'Noise seed', 0, 999, 1, 7),
+    R('detailFade', 'Fade texture at rim/base', 0, 0.3, 0.01, 0.05),
+  ]),
+  G('Holes', 'perforation', [
+    C('holesOn', 'Cut holes through the wall', false),
+    S('holeShape', 'Hole shape', ['circle', 'square', 'diamond', 'slot'], 'circle'),
+    R('holeCols', 'Holes around', 3, 48, 1, 12),
+    R('holeRows', 'Hole rows', 1, 30, 1, 6),
+    R('holeSize', 'Hole size', 0.1, 0.95, 0.01, 0.6),
+    R('holeStart', 'Start height', 0.02, 0.98, 0.01, 0.3),
+    R('holeEnd', 'End height', 0.02, 0.98, 0.01, 0.8),
+    C('holeStagger', 'Stagger rows', true),
+    R('holeShift', 'Diagonal shift per row', -1, 1, 0.01, 0),
+  ]),
+  G('Construction', 'mesh', [
+    C('closedBottom', 'Closed bottom', true),
+    R('radialSegs', 'Radial segments', 24, 400, 4, 180),
+    R('heightSegs', 'Height segments', 16, 400, 4, 160),
+  ]),
+  G('Color & glaze', 'material', [
+    S('colorMode', 'Color mode', ['solid', 'gradient', 'three-tone', 'bands', 'stripes', 'spiral'], 'gradient'),
+    K('color1', 'Color A (base)', '#2f6f73'),
+    K('color2', 'Color B', '#d9a35b'),
+    K('color3', 'Color C (top)', '#efe7da'),
+    R('bandCount', 'Band / stripe count', 2, 40, 1, 8),
+    C('innerColorOn', 'Separate inside color', true),
+    K('innerColor', 'Inside color', '#e8e0d0'),
+    R('metalness', 'Metalness', 0, 1, 0.01, 0.05),
+    R('roughness', 'Roughness', 0, 1, 0.01, 0.4),
+    R('clearcoat', 'Glaze (clearcoat)', 0, 1, 0.01, 0.5),
+    C('flatShading', 'Flat shading (low-poly look)', false),
+    C('wireframe', 'Wireframe', false),
+  ]),
+  G('Scene', 'view only', [
+    C('customBg', 'Custom background (instead of theme)', false),
+    K('bgColor', 'Background', '#1b1e22'),
+    R('exposure', 'Exposure', 0.3, 2, 0.01, 1),
+    C('autoRotate', 'Auto-rotate', true),
+    C('showGrid', 'Show floor grid', true),
+  ]),
+];
+
+const DEFAULTS = {};
+SCHEMA.forEach(g => g.params.forEach(p => DEFAULTS[p.key] = p.value));
+const P = { ...DEFAULTS };
+
+const PRESETS = {
+  'Classic': {},
+  'Twisted hex': { sides: 6, twist: 180, bellyAmount: 18, neckAmount: 6, lipFlare: 4, color1: '#3b3f8f', color2: '#8f6bd1', color3: '#e6dcf7', colorMode: 'three-tone' },
+  'Rib bottle': { height: 240, bottomRadius: 34, topRadius: 10, bellyAmount: 22, bellyPos: 0.3, neckAmount: 4, neckPos: 0.82, lipFlare: 4, ribCount: 24, ribDepth: 2.5, ribSharp: 3, color1: '#7a2e2e', color2: '#c96f4a', colorMode: 'gradient' },
+  'Lattice lantern': { height: 170, bottomRadius: 45, topRadius: 42, bellyAmount: 10, neckAmount: 0, lipFlare: 0, holesOn: true, holeShape: 'diamond', holeCols: 18, holeRows: 9, holeSize: 0.78, holeStart: 0.12, holeEnd: 0.9, radialSegs: 288, heightSegs: 240, color1: '#1f3b2d', color2: '#9bc48a', colorMode: 'gradient' },
+  'Knurled cup': { height: 110, bottomRadius: 38, topRadius: 46, bellyAmount: 0, neckAmount: 0, lipFlare: 2, spiralCount: 28, spiralTurns: 0.5, spiralDepth: 1.6, crossHatch: true, spiralSharp: 2, color1: '#3c3a36', color2: '#c7a76c', colorMode: 'bands', bandCount: 3 },
+  'Organic pot': { height: 150, bottomRadius: 36, topRadius: 44, bellyAmount: 24, bellyPos: 0.45, neckAmount: 8, neckPos: 0.85, noiseAmt: 5, noiseScale: 2.5, wobbleAmp: 4, wobbleFreq: 1.5, color1: '#5b4636', color2: '#b98b62', color3: '#e9d7bf', colorMode: 'three-tone', roughness: 0.75, clearcoat: 0.1 },
+  'Wave spiral': { height: 220, bottomRadius: 30, topRadius: 38, bellyAmount: 14, neckAmount: 0, lipFlare: 10, spiralCount: 8, spiralTurns: 1.5, spiralDepth: 5, spiralSharp: 1.5, waveCount: 6, waveDepth: 2, colorMode: 'spiral', bandCount: 8, color1: '#0f4c5c', color2: '#e36414' },
+  'Leaning oval': { stretchX: 1.4, stretchZ: 0.7, leanX: 30, twist: 90, ribCount: 16, ribDepth: 1.5, color1: '#264653', color2: '#2a9d8f', color3: '#e9c46a', colorMode: 'three-tone' },
+};
+
+/* ------------------------------------------------------------------ *
+ *  UI construction
+ * ------------------------------------------------------------------ */
+const controls = document.getElementById('controls');
+const inputs = {};
+const fmt = (p, v) => {
+  const dec = p.step >= 1 ? 0 : p.step >= 0.1 ? 1 : 2;
+  return Number(v).toFixed(dec);
+};
+
+SCHEMA.forEach((g, gi) => {
+  const d = document.createElement('details');
+  if (gi < 3) d.open = true;
+  d.innerHTML = `<summary>${g.name}<small>${g.params.length} · ${g.note}</small></summary>`;
+  const box = document.createElement('div');
+  box.className = 'group';
+  g.params.forEach(p => {
+    const id = 'p_' + p.key;
+    let el;
+    if (p.type === 'range') {
+      el = document.createElement('div'); el.className = 'row';
+      el.innerHTML = `<label for="${id}">${p.label}<em>${p.unit}</em></label>
+        <input type="range" id="${id}" min="${p.min}" max="${p.max}" step="${p.step}">
+        <input type="number" id="${id}_n" min="${p.min}" max="${p.max}" step="${p.step}" aria-label="${p.label} value">`;
+      const r = el.querySelector('input[type=range]'), n = el.querySelector('input[type=number]');
+      r.addEventListener('input', () => { P[p.key] = +r.value; n.value = fmt(p, r.value); changed(p.key); });
+      n.addEventListener('change', () => {
+        let v = Math.min(p.max, Math.max(p.min, +n.value || 0));
+        P[p.key] = v; r.value = v; n.value = fmt(p, v); changed(p.key);
+      });
+      inputs[p.key] = { set: v => { r.value = v; n.value = fmt(p, v); } };
+    } else if (p.type === 'check') {
+      el = document.createElement('label'); el.className = 'check';
+      el.innerHTML = `<input type="checkbox" id="${id}"> ${p.label}`;
+      const c = el.querySelector('input');
+      c.addEventListener('change', () => { P[p.key] = c.checked; changed(p.key); });
+      inputs[p.key] = { set: v => { c.checked = !!v; } };
+    } else if (p.type === 'select') {
+      el = document.createElement('div'); el.className = 'sel';
+      el.innerHTML = `<label for="${id}">${p.label}</label><select id="${id}">${p.options.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+      const s = el.querySelector('select');
+      s.addEventListener('change', () => { P[p.key] = s.value; changed(p.key); });
+      inputs[p.key] = { set: v => { s.value = v; } };
+    } else if (p.type === 'color') {
+      el = document.createElement('div'); el.className = 'colr';
+      el.innerHTML = `<label for="${id}">${p.label}</label><input type="color" id="${id}"><code></code>`;
+      const c = el.querySelector('input'), code = el.querySelector('code');
+      c.addEventListener('input', () => { P[p.key] = c.value; code.textContent = c.value; changed(p.key); });
+      inputs[p.key] = { set: v => { c.value = v; code.textContent = v; } };
+    }
+    box.appendChild(el);
+  });
+  d.appendChild(box);
+  controls.appendChild(d);
+});
+
+const presetBox = document.getElementById('presets');
+Object.keys(PRESETS).forEach(name => {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.textContent = name;
+  b.addEventListener('click', () => applyParams({ ...DEFAULTS, autoRotate: P.autoRotate, showGrid: P.showGrid, bgColor: P.bgColor, ...PRESETS[name] }, name));
+  presetBox.appendChild(b);
+});
+
+function syncUI() { for (const k in inputs) inputs[k].set(P[k]); }
+syncUI();
+
+/* ------------------------------------------------------------------ *
+ *  Math helpers
+ * ------------------------------------------------------------------ */
+const TAU = Math.PI * 2;
+const gauss = (t, c, w) => Math.exp(-((t - c) * (t - c)) / (2 * w * w));
+const smooth = x => x * x * (3 - 2 * x);
+function hash(x, y, z, s) {
+  let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 1440662683) ^ Math.imul(s + 1, 2246822519 | 0);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function vnoise(x, y, z, s) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const fx = smooth(x - xi), fy = smooth(y - yi), fz = smooth(z - zi);
+  const L = (a, b, t) => a + (b - a) * t;
+  const h = (i, j, k) => hash(xi + i, yi + j, zi + k, s);
+  return L(
+    L(L(h(0,0,0), h(1,0,0), fx), L(h(0,1,0), h(1,1,0), fx), fy),
+    L(L(h(0,0,1), h(1,0,1), fx), L(h(0,1,1), h(1,1,1), fx), fy), fz);
+}
+function fbm(x, y, z, s) { return (vnoise(x, y, z, s) * 0.65 + vnoise(x * 2.03, y * 2.03, z * 2.03, s + 17) * 0.35) * 2 - 1; }
+
+/* Profile radius (before cross-section and texture) at height fraction t */
+function profileRadius(t) {
+  let r = P.bottomRadius + (P.topRadius - P.bottomRadius) * Math.pow(t, P.taperCurve);
+  r += P.bellyAmount * gauss(t, P.bellyPos, P.bellyWidth);
+  r -= P.neckAmount * gauss(t, P.neckPos, P.neckWidth);
+  if (P.lipHeight > 0 && t > 1 - P.lipHeight) { const k = (t - (1 - P.lipHeight)) / P.lipHeight; r += P.lipFlare * k * k; }
+  if (P.footHeight > 0 && t < P.footHeight) { const k = 1 - t / P.footHeight; r += P.footFlare * k * k; }
+  r *= 1 + (P.topScale - 1) * t;
+  return Math.max(r, 2);
+}
+
+/* Outer surface point. phi = local angle (follows the twist), t = 0..1 */
+function surface(phi, t, out) {
+  let r = profileRadius(t);
+  // cross-section polygon
+  if (P.sides >= 3) {
+    const n = P.sides, seg = TAU / n;
+    let a = (phi - P.polyRotate * Math.PI / 180) % seg; if (a < 0) a += seg;
+    const poly = Math.cos(Math.PI / n) / Math.cos(a - seg / 2);
+    r *= 1 + (poly - 1) * P.polyBlend;
+  }
+  // texture
+  let d = 0;
+  if (P.ribCount > 0 && P.ribDepth > 0) d += P.ribDepth * Math.pow((Math.cos(P.ribCount * phi) + 1) / 2, P.ribSharp);
+  if (P.spiralCount > 0 && P.spiralDepth > 0) {
+    const k = P.spiralCount, sh = TAU * P.spiralTurns * t;
+    d += P.spiralDepth * Math.pow((Math.cos(k * (phi + sh)) + 1) / 2, P.spiralSharp);
+    if (P.crossHatch) d += P.spiralDepth * Math.pow((Math.cos(k * (phi - sh)) + 1) / 2, P.spiralSharp);
+  }
+  if (P.waveCount > 0 && P.waveDepth > 0) d += P.waveDepth * Math.sin(TAU * P.waveCount * t + P.wavePhase * Math.PI / 180);
+  if (P.noiseAmt > 0) {
+    const s = P.noiseScale;
+    d += P.noiseAmt * fbm(Math.cos(phi) * s + 50, Math.sin(phi) * s + 50, t * (P.height / 60) * s, P.noiseSeed);
+  }
+  if (P.detailFade > 0) {
+    const f = Math.min(1, t / P.detailFade, (1 - t) / P.detailFade);
+    d *= smooth(Math.max(0, f));
+  }
+  const rr = Math.max(r + d, 1.5);
+  let lx = rr * Math.cos(phi) * P.stretchX, lz = rr * Math.sin(phi) * P.stretchZ;
+  // rotate extrude (twist)
+  const tw = (P.twist * Math.pow(t, P.twistCurve) + P.twistWaveAmp * Math.sin(TAU * P.twistWaveFreq * t)) * Math.PI / 180;
+  const c = Math.cos(tw), s = Math.sin(tw);
+  // linear extrude offsets
+  const lc = Math.pow(t, P.leanCurve);
+  const cx = P.leanX * lc + P.wobbleAmp * Math.sin(TAU * P.wobbleFreq * t);
+  const cz = P.leanZ * lc + P.wobbleAmp * Math.cos(TAU * P.wobbleFreq * t) - P.wobbleAmp;
+  out[0] = lx * c - lz * s + cx;
+  out[1] = t * P.height;
+  out[2] = lx * s + lz * c + cz;
+  out[3] = cx; out[4] = cz; // axis centre at this height
+  return out;
+}
+
+/* Signed distance (mm, negative = inside a hole) of point (phi, t) to the nearest hole outline. */
+function holeSD(phi, t) {
+  const a = P.holeStart, b = P.holeEnd;
+  if (b - a < 0.01) return 1e9;
+  const tc = Math.min(Math.max(t, a), b);
+  const rowF = (tc - a) / (b - a) * P.holeRows;
+  const row = Math.min(P.holeRows - 1, Math.floor(rowF));
+  const ch = (b - a) * P.height / P.holeRows;
+  const py = ((t - a) / (b - a) * P.holeRows - row - 0.5) * ch;
+  const colF = phi / TAU * P.holeCols + (P.holeStagger && row % 2 ? 0.5 : 0) + P.holeShift * row;
+  const rad = profileRadius(Math.min(Math.max(t, 0), 1)) * (P.stretchX + P.stretchZ) / 2;
+  const cw = TAU * rad / P.holeCols;
+  const px = (colF - Math.floor(colF) - 0.5) * cw;
+  const m = Math.min(cw, ch) * P.holeSize / 2;
+  const ax = Math.abs(px), ay = Math.abs(py);
+  switch (P.holeShape) {
+    case 'square': return Math.max(ax, ay) - m;
+    case 'diamond': return (ax + ay - m * 1.15) / Math.SQRT2;
+    case 'slot': return Math.max(ax - m * 0.45, ay - ch * P.holeSize / 2);
+    default: return Math.hypot(px, py) - m;
+  }
+}
+const inHole = (phi, t) => t >= P.holeStart && t <= P.holeEnd && holeSD(phi, t) < 0;
+
+/* ------------------------------------------------------------------ *
+ *  Mesh builder: outer wall, inner wall, rim, base, hole side-walls.
+ *  Result is a closed (watertight) solid, ready for slicing.
+ * ------------------------------------------------------------------ */
+function buildGeometry() {
+  const RS = Math.round(P.radialSegs), HS = Math.round(P.heightSegs);
+  const pos = [], col = [], idx = [];
+  const tmp = new Float32Array(5);
+  const ca = new THREE.Color(P.color1), cb = new THREE.Color(P.color2), cc = new THREE.Color(P.color3), ci = new THREE.Color(P.innerColor);
+  const cTmp = new THREE.Color();
+
+  function colorAt(phi, t, inner) {
+    if (inner && P.innerColorOn) return ci;
+    const n = P.bandCount;
+    switch (P.colorMode) {
+      case 'solid': return ca;
+      case 'gradient': return cTmp.copy(ca).lerp(cb, t);
+      case 'three-tone': return t < 0.5 ? cTmp.copy(ca).lerp(cb, t * 2) : cTmp.copy(cb).lerp(cc, (t - 0.5) * 2);
+      case 'bands': return Math.floor(t * n) % 2 ? cb : ca;
+      case 'stripes': return Math.floor(phi / TAU * n) % 2 ? cb : ca;
+      case 'spiral': { let v = phi / TAU + t * (P.spiralTurns || 1); v = v - Math.floor(v); return Math.floor(v * n) % 2 ? cb : ca; }
+    }
+    return ca;
+  }
+  const addV = (x, y, z, c) => { pos.push(x, y, z); col.push(c.r, c.g, c.b); return pos.length / 3 - 1; };
+  const dup = i => { pos.push(pos[i*3], pos[i*3+1], pos[i*3+2]); col.push(col[i*3], col[i*3+1], col[i*3+2]); return pos.length / 3 - 1; };
+
+  const vb = P.closedBottom ? Math.min(0.5, P.baseThickness / P.height) : 0;
+  const O = new Int32Array(RS * (HS + 1)), I = new Int32Array(RS * (HS + 1));
+  const centers = [];
+  let innerAreaRings = [];
+
+  // hole mask
+  const hole = new Uint8Array(RS * HS);
+  let anyHole = false;
+  if (P.holesOn) {
+    for (let j = 2; j < HS - 2; j++) for (let i = 0; i < RS; i++) {
+      if (inHole((i + 0.5) / RS * TAU, (j + 0.5) / HS)) { hole[j * RS + i] = 1; anyHole = true; }
+    }
+  }
+  // Snap grid vertices on a hole edge onto the true outline (smooth holes instead of stair-steps).
+  const dPhi = new Float32Array(RS * (HS + 1)), dT = new Float32Array(RS * (HS + 1));
+  if (anyHole) {
+    const cp = TAU / RS, ct = 1 / HS, e = 1e-4;
+    for (let j = 2; j <= HS - 2; j++) for (let i = 0; i < RS; i++) {
+      const im = (i - 1 + RS) % RS;
+      const n = hole[(j-1)*RS+im] + hole[(j-1)*RS+i] + hole[j*RS+im] + hole[j*RS+i];
+      if (n === 0 || n === 4) continue;
+      let ph = i * cp, t = j * ct;
+      for (let it = 0; it < 3; it++) {
+        const d = holeSD(ph, t);
+        const gp = (holeSD(ph + e, t) - holeSD(ph - e, t)) / (2 * e);
+        const gt = (holeSD(ph, t + e) - holeSD(ph, t - e)) / (2 * e);
+        const g2 = gp * gp + gt * gt;
+        if (g2 < 1e-9) break;
+        ph -= d * gp / g2; t -= d * gt / g2;
+        ph = Math.min(Math.max(ph, (i - 0.49) * cp), (i + 0.49) * cp);
+        t = Math.min(Math.max(t, (j - 0.49) * ct), (j + 0.49) * ct);
+      }
+      dPhi[j*RS+i] = ph - i * cp; dT[j*RS+i] = t - j * ct;
+    }
+  }
+
+  for (let j = 0; j <= HS; j++) {
+    const ring = [];
+    for (let i = 0; i < RS; i++) {
+      const t = j / HS + dT[j * RS + i];
+      const tin = vb + (1 - vb) * t;
+      const phi = i / RS * TAU + dPhi[j * RS + i];
+      surface(phi, t, tmp);
+      O[j * RS + i] = addV(tmp[0], tmp[1], tmp[2], colorAt(phi, t, false));
+      if (i === 0) centers[j] = [tmp[3], tmp[4]];
+      surface(phi, tin, tmp);
+      const dx = tmp[0] - tmp[3], dz = tmp[2] - tmp[4];
+      const dist = Math.hypot(dx, dz);
+      const f = Math.max(0.04, 1 - P.wallThickness / dist);
+      const x = tmp[3] + dx * f, z = tmp[4] + dz * f;
+      I[j * RS + i] = addV(x, tmp[1], z, colorAt(phi, tin, true));
+      ring.push(x, z);
+    }
+    // inner cross-section area (shoelace) for capacity estimate
+    let A = 0;
+    for (let i = 0; i < RS; i++) { const k = (i + 1) % RS; A += ring[i*2] * ring[k*2+1] - ring[k*2] * ring[i*2+1]; }
+    innerAreaRings.push([Math.abs(A) / 2, (vb + (1 - vb) * j / HS) * P.height]);
+  }
+
+  const isHole = (i, j) => j >= 0 && j < HS && hole[j * RS + ((i % RS) + RS) % RS] === 1;
+
+  const v3 = (i) => [pos[i*3], pos[i*3+1], pos[i*3+2]];
+  function triOriented(a, b, c, ref) {
+    const A = v3(a), B = v3(b), Cc = v3(c);
+    const ux = B[0]-A[0], uy = B[1]-A[1], uz = B[2]-A[2];
+    const wx = Cc[0]-A[0], wy = Cc[1]-A[1], wz = Cc[2]-A[2];
+    const nx = uy*wz - uz*wy, ny = uz*wx - ux*wz, nz = ux*wy - uy*wx;
+    if (nx*ref[0] + ny*ref[1] + nz*ref[2] < 0) idx.push(a, c, b); else idx.push(a, b, c);
+  }
+  function quadOriented(a, b, c, d, ref) {
+    // decide orientation once for the quad so both triangles agree
+    const A = v3(a), B = v3(b), Cc = v3(c), D = v3(d);
+    const ux = Cc[0]-A[0], uy = Cc[1]-A[1], uz = Cc[2]-A[2];
+    const wx = D[0]-B[0], wy = D[1]-B[1], wz = D[2]-B[2];
+    const nx = uy*wz - uz*wy, ny = uz*wx - ux*wz, nz = ux*wy - uy*wx;
+    if (nx*ref[0] + ny*ref[1] + nz*ref[2] < 0) idx.push(a, c, b, a, d, c); else idx.push(a, b, c, a, c, d);
+  }
+
+  // walls
+  for (let j = 0; j < HS; j++) for (let i = 0; i < RS; i++) {
+    if (hole[j * RS + i]) continue;
+    const i1 = (i + 1) % RS;
+    const o00 = O[j*RS+i], o10 = O[j*RS+i1], o11 = O[(j+1)*RS+i1], o01 = O[(j+1)*RS+i];
+    idx.push(o00, o01, o11, o00, o11, o10);              // outer, faces out
+    const n00 = I[j*RS+i], n10 = I[j*RS+i1], n11 = I[(j+1)*RS+i1], n01 = I[(j+1)*RS+i];
+    idx.push(n00, n10, n11, n00, n11, n01);              // inner, faces the cavity
+  }
+
+  // hole side walls (side-wall vertices are shared between neighbouring side faces so shading stays smooth)
+  const sideMap = new Map();
+  const sideV = i => { let k = sideMap.get(i); if (k === undefined) { k = dup(i); sideMap.set(i, k); } return k; };
+  if (anyHole) {
+    for (let j = 0; j < HS; j++) for (let i = 0; i < RS; i++) {
+      if (!hole[j * RS + i]) continue;
+      const i1 = (i + 1) % RS;
+      const corners = [O[j*RS+i], O[j*RS+i1], O[(j+1)*RS+i1], O[(j+1)*RS+i], I[j*RS+i], I[j*RS+i1], I[(j+1)*RS+i1], I[(j+1)*RS+i]];
+      const ctr = [0, 0, 0];
+      corners.forEach(k => { ctr[0] += pos[k*3] / 8; ctr[1] += pos[k*3+1] / 8; ctr[2] += pos[k*3+2] / 8; });
+      const edge = (oa, ob, ia, ib) => {
+        const a = sideV(oa), b = sideV(ob), c = sideV(ib), d = sideV(ia);
+        const m = [(pos[a*3]+pos[b*3]+pos[c*3]+pos[d*3])/4, (pos[a*3+1]+pos[b*3+1]+pos[c*3+1]+pos[d*3+1])/4, (pos[a*3+2]+pos[b*3+2]+pos[c*3+2]+pos[d*3+2])/4];
+        quadOriented(a, b, c, d, [ctr[0]-m[0], ctr[1]-m[1], ctr[2]-m[2]]);
+      };
+      if (!isHole(i - 1, j)) edge(O[j*RS+i], O[(j+1)*RS+i], I[j*RS+i], I[(j+1)*RS+i]);
+      if (!isHole(i + 1, j)) edge(O[j*RS+i1], O[(j+1)*RS+i1], I[j*RS+i1], I[(j+1)*RS+i1]);
+      if (!isHole(i, j - 1)) edge(O[j*RS+i], O[j*RS+i1], I[j*RS+i], I[j*RS+i1]);
+      if (!isHole(i, j + 1)) edge(O[(j+1)*RS+i], O[(j+1)*RS+i1], I[(j+1)*RS+i], I[(j+1)*RS+i1]);
+    }
+  }
+
+  // rim
+  for (let i = 0; i < RS; i++) {
+    const i1 = (i + 1) % RS;
+    quadOriented(dup(O[HS*RS+i]), dup(O[HS*RS+i1]), dup(I[HS*RS+i1]), dup(I[HS*RS+i]), [0, 1, 0]);
+  }
+
+  // base
+  if (P.closedBottom) {
+    const [bx, bz] = centers[0];
+    const cOut = addV(bx, 0, bz, colorAt(0, 0, false));
+    const tmpC = surface(0, vb, new Float32Array(5));
+    const cIn = addV(tmpC[3], vb * P.height, tmpC[4], colorAt(0, vb, true));
+    for (let i = 0; i < RS; i++) {
+      const i1 = (i + 1) % RS;
+      triOriented(cOut, dup(O[i]), dup(O[i1]), [0, -1, 0]);
+      triOriented(cIn, dup(I[i]), dup(I[i1]), [0, 1, 0]);
+    }
+  } else {
+    for (let i = 0; i < RS; i++) {
+      const i1 = (i + 1) % RS;
+      quadOriented(dup(O[i]), dup(O[i1]), dup(I[i1]), dup(I[i]), [0, -1, 0]);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  geo.computeBoundingBox();
+
+  // stats: solid volume (divergence theorem) and cavity capacity
+  let vol = 0;
+  for (let k = 0; k < idx.length; k += 3) {
+    const a = idx[k]*3, b = idx[k+1]*3, c = idx[k+2]*3;
+    vol += (pos[a] * (pos[b+1]*pos[c+2] - pos[b+2]*pos[c+1])
+          - pos[a+1] * (pos[b]*pos[c+2] - pos[b+2]*pos[c])
+          + pos[a+2] * (pos[b]*pos[c+1] - pos[b+1]*pos[c])) / 6;
+  }
+  let cap = 0;
+  for (let j = 1; j < innerAreaRings.length; j++) {
+    const [a0, y0] = innerAreaRings[j - 1], [a1, y1] = innerAreaRings[j];
+    cap += (a0 + a1) / 2 * (y1 - y0);
+  }
+  geo.userData = { volume: Math.abs(vol), capacity: cap, tris: idx.length / 3, anyHole };
+  return geo;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Three.js scene
+ * ------------------------------------------------------------------ */
+const viewport = document.getElementById('viewport');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+viewport.appendChild(renderer.domElement);
+document.getElementById('loading').remove();
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true;
+orbit.autoRotateSpeed = 1.2;
+
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(200, 400, 250);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -300, right: 300, top: 300, bottom: -300, near: 10, far: 1200 });
+scene.add(key);
+const rimLight = new THREE.DirectionalLight(0xffe2c0, 0.6);
+rimLight.position.set(-300, 150, -200);
+scene.add(rimLight);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.35));
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(900, 64), new THREE.ShadowMaterial({ opacity: 0.3 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+let grid = null;
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function makeGrid() {
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+  grid = new THREE.GridHelper(600, 30, new THREE.Color(cssVar('--grid-a')), new THREE.Color(cssVar('--grid-b')));
+  grid.position.y = 0.05; grid.visible = P.showGrid; scene.add(grid);
+}
+
+// Section cut-away: one clipping plane shared by the vase and its "cut face" twin.
+// The twin renders only back faces in a flat colour, so wherever the plane opens the wall
+// you see a solid cross-section instead of a hollow shell.
+const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const section = { on: false, axis: 'x', pos: 50, flip: false };
+const material = new THREE.MeshPhysicalMaterial({ vertexColors: true, side: THREE.FrontSide });
+const cutMaterial = new THREE.MeshBasicMaterial({ color: 0xe0603a, side: THREE.BackSide });
+const vase = new THREE.Mesh(new THREE.BufferGeometry(), material);
+vase.castShadow = true; vase.receiveShadow = true;
+const cutFace = new THREE.Mesh(vase.geometry, cutMaterial);
+cutFace.visible = false;
+scene.add(vase, cutFace);
+
+function updateSection() {
+  const bb = vase.geometry.boundingBox;
+  const planes = section.on ? [clipPlane] : [];
+  material.clippingPlanes = planes; cutMaterial.clippingPlanes = planes;
+  cutFace.visible = section.on && !P.wireframe;
+  if (!bb) return;
+  const ax = section.axis, f = section.pos / 100;
+  const min = bb.min[ax], max = bb.max[ax];
+  const v = min + (max - min) * f;
+  const s = section.flip ? -1 : 1;
+  clipPlane.normal.set(ax === 'x' ? -s : 0, ax === 'y' ? -s : 0, ax === 'z' ? -s : 0);
+  clipPlane.constant = s * v;
+  document.getElementById('secOut').textContent = `${section.pos}% · ${v.toFixed(1)} mm`;
+  material.needsUpdate = true; cutMaterial.needsUpdate = true;
+}
+
+let shadowsOn = true;
+function updateMaterial() {
+  material.metalness = P.metalness;
+  material.roughness = P.roughness;
+  material.clearcoat = P.clearcoat;
+  material.clearcoatRoughness = 0.15;
+  material.flatShading = P.flatShading;
+  material.wireframe = P.wireframe;
+  material.needsUpdate = true;
+  scene.background = new THREE.Color(P.customBg ? P.bgColor : cssVar('--scene-bg'));
+  cutMaterial.color.set(cssVar('--cut'));
+  renderer.toneMappingExposure = P.exposure;
+  orbit.autoRotate = P.autoRotate;
+  if (grid) grid.visible = P.showGrid;
+  floor.visible = shadowsOn;
+  vase.castShadow = shadowsOn;
+  cutFace.visible = section.on && !P.wireframe;
+  syncViewTools();
+}
+
+/* camera presets */
+function frame(dir) {
+  const bb = vase.geometry.boundingBox;
+  const size = bb ? bb.getSize(new THREE.Vector3()) : new THREE.Vector3(150, 180, 150);
+  const center = bb ? bb.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 90, 0);
+  const radius = Math.max(size.x, size.y, size.z) * 0.62 + 20;
+  const dist = radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * (camera.aspect < 1 ? 1.35 : 1);
+  const d = { iso: [0.62, 0.42, 0.66], front: [0, 0.02, 1], side: [1, 0.02, 0], top: [0.0001, 1, 0.0001] }[dir];
+  const v = new THREE.Vector3(...d).normalize().multiplyScalar(dist);
+  orbit.target.copy(center);
+  camera.position.copy(center).add(v);
+  orbit.update();
+}
+
+const statsEl = document.getElementById('stats');
+function rebuild() {
+  const geo = buildGeometry();
+  vase.geometry.dispose();
+  vase.geometry = geo;
+  cutFace.geometry = geo;
+  updateSection();
+  if (typeof paintColorUI === 'function') paintColorUI();
+  const bb = geo.boundingBox, u = geo.userData;
+  const w = bb.max.x - bb.min.x, d = bb.max.z - bb.min.z, h = bb.max.y - bb.min.y;
+  const cm3 = u.volume / 1000;
+  statsEl.innerHTML = `
+    <dt>Size</dt><dd>${w.toFixed(0)} × ${d.toFixed(0)} × ${h.toFixed(0)} mm</dd>
+    <dt>Triangles</dt><dd>${u.tris.toLocaleString()}</dd>
+    <dt>Material</dt><dd>${cm3.toFixed(1)} cm³ · ≈${(cm3 * 1.24).toFixed(0)} g PLA</dd>
+    <dt>Capacity</dt><dd>${u.anyHole || !P.closedBottom ? 'open (holes)' : '≈' + (u.capacity / 1000).toFixed(0) + ' ml'}</dd>`;
+  if (!P.closedBottom) statsEl.lastElementChild.textContent = 'open bottom';
+}
+
+const MATERIAL_KEYS = new Set(['metalness', 'roughness', 'clearcoat', 'flatShading', 'wireframe', 'bgColor', 'exposure', 'autoRotate', 'showGrid', 'customBg']);
+let pending = false;
+function changed(key) {
+  if (MATERIAL_KEYS.has(key)) { updateMaterial(); return; }
+  if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; rebuild(); }); }
+}
+
+function applyParams(obj, label) {
+  for (const k in DEFAULTS) if (k in obj) P[k] = obj[k];
+  syncUI(); updateMaterial(); rebuild();
+  frame('iso');
+  if (label) toast(label);
+}
+
+function resize() {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / Math.max(h, 1);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(viewport);
+
+function loop() { orbit.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
+
+/* ------------------------------------------------------------------ *
+ *  Toolbar: randomize, reset, save/load, export
+ * ------------------------------------------------------------------ */
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800); }
+
+function download(data, name, type) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('Saved ' + name);
+}
+const stamp = () => 'vase-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+
+function exportMesh(transform) {
+  const g = vase.geometry.clone();
+  transform && transform(g);
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: P.metalness, roughness: P.roughness });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.name = 'Vase';
+  return mesh;
+}
+// Exports always use the full, uncut model (the section cut is a view-only tool).
+function makeSTL() {          // millimetres, Z-up (what slicers expect)
+  const dv = new STLExporter().parse(exportMesh(g => g.rotateX(Math.PI / 2)), { binary: true });
+  return new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+}
+function makeOBJ() {          // millimetres, Y-up, with vertex colours
+  return new OBJExporter().parse(exportMesh());
+}
+function makeGLB() {          // glTF uses metres
+  return new GLTFExporter().parseAsync(exportMesh(g => g.scale(0.001, 0.001, 0.001)), { binary: true })
+    .then(buf => new Uint8Array(buf));
+}
+// Transparent PNG of the current view: no background, grid, floor shadow or section cut; at least 2048 px wide.
+function makePNG() {
+  const prev = { bg: scene.background, grid: grid.visible, floor: floor.visible, pr: renderer.getPixelRatio(), planes: material.clippingPlanes, cut: cutFace.visible };
+  scene.background = null; grid.visible = false; floor.visible = false;
+  material.clippingPlanes = []; cutFace.visible = false; material.needsUpdate = true;
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  renderer.setPixelRatio(Math.max(2, Math.ceil(2048 / w)));
+  renderer.setSize(w, h, false);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, camera);
+  return new Promise(resolve => renderer.domElement.toBlob(blob => {
+    scene.background = prev.bg; grid.visible = prev.grid; floor.visible = prev.floor;
+    material.clippingPlanes = prev.planes; cutFace.visible = prev.cut; material.needsUpdate = true;
+    renderer.setPixelRatio(prev.pr); resize();
+    blob.arrayBuffer().then(b => resolve(new Uint8Array(b)));
+  }, 'image/png'));
+}
+
+async function busy(btn, fn) {
+  btn.disabled = true;
+  try { await fn(); } catch (e) { console.error(e); toast('Export failed: ' + (e.message || e)); }
+  finally { btn.disabled = false; }
+}
+const bind = (id, fn) => { const b = document.getElementById(id); b.addEventListener('click', () => busy(b, fn)); };
+bind('btnSTL', async () => download(new Blob([makeSTL()], { type: 'model/stl' }), stamp() + '.stl'));
+bind('btnOBJ', async () => download(makeOBJ(), stamp() + '.obj', 'text/plain'));
+bind('btnGLB', async () => download(new Blob([await makeGLB()], { type: 'model/gltf-binary' }), stamp() + '.glb'));
+bind('btnPNG', async () => download(new Blob([await makePNG()], { type: 'image/png' }), stamp() + '.png'));
+bind('btnALL', async () => {
+  toast('Packing STL, OBJ, GLB, PNG and settings…');
+  const base = stamp();
+  const files = {
+    [base + '.stl']: makeSTL(),
+    [base + '.obj']: strToU8(makeOBJ()),
+    [base + '.glb']: await makeGLB(),
+    [base + '.png']: [await makePNG(), { level: 0 }],
+    [base + '.json']: strToU8(JSON.stringify(P, null, 2)),
+    'README.txt': strToU8('Vase Studio export\n\n.stl  millimetres, Z-up, for 3D printing\n.obj  millimetres, Y-up, with vertex colours\n.glb  metres (glTF standard), with vertex colours\n.png  transparent render of the current view\n.json settings: load it back with "Load .json"\n'),
+  };
+  const zip = zipSync(files, { level: 6 });
+  download(new Blob([zip], { type: 'application/zip' }), base + '.zip');
+});
+document.getElementById('btnSave').addEventListener('click', () => download(JSON.stringify(P, null, 2), stamp() + '.json', 'application/json'));
+const fileLoad = document.getElementById('fileLoad');
+document.getElementById('btnLoad').addEventListener('click', () => fileLoad.click());
+fileLoad.addEventListener('change', async () => {
+  const f = fileLoad.files[0]; if (!f) return;
+  try { applyParams(JSON.parse(await f.text()), 'Loaded ' + f.name); } catch { toast('That file is not a vase .json'); }
+  fileLoad.value = '';
+});
+document.getElementById('btnReset').addEventListener('click', () => applyParams({ ...DEFAULTS }, 'Reset to defaults'));
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const hsl = (h, s, l) => '#' + new THREE.Color().setHSL(h, s, l, THREE.SRGBColorSpace).getHexString(THREE.SRGBColorSpace);
+document.getElementById('btnRandom').addEventListener('click', () => {
+  const h = Math.random();
+  const o = {
+    height: Math.round(rnd(90, 280)), bottomRadius: rnd(22, 55), topRadius: rnd(10, 55), taperCurve: rnd(0.6, 2),
+    bellyAmount: rnd(-5, 35), bellyPos: rnd(0.2, 0.6), bellyWidth: rnd(0.12, 0.35),
+    neckAmount: rnd(0, 20), neckPos: rnd(0.65, 0.9), neckWidth: rnd(0.06, 0.2),
+    lipFlare: rnd(-4, 14), lipHeight: rnd(0.05, 0.2), footFlare: rnd(-3, 6),
+    sides: pick([0, 0, 0, 3, 4, 5, 6, 8]), polyBlend: rnd(0.5, 1), twist: pick([0, 0, rnd(-240, 240)]),
+    stretchX: pick([1, 1, rnd(0.75, 1.3)]), stretchZ: pick([1, 1, rnd(0.75, 1.3)]),
+    ribCount: pick([0, 0, Math.round(rnd(6, 36))]), ribDepth: rnd(1, 4), ribSharp: rnd(0.6, 4),
+    spiralCount: pick([0, 0, Math.round(rnd(4, 24))]), spiralTurns: rnd(-1.5, 1.5), spiralDepth: rnd(0.8, 3.5), crossHatch: Math.random() < 0.25,
+    waveCount: pick([0, 0, rnd(2, 10)]), waveDepth: rnd(0.8, 3),
+    noiseAmt: pick([0, 0, rnd(1, 5)]), noiseSeed: Math.round(rnd(0, 999)),
+    leanX: pick([0, 0, 0, rnd(-30, 30)]), wobbleAmp: pick([0, 0, rnd(1, 6)]),
+    holesOn: Math.random() < 0.2, holeShape: pick(['circle', 'square', 'diamond', 'slot']), holeCols: Math.round(rnd(8, 24)), holeRows: Math.round(rnd(3, 10)),
+    colorMode: pick(['gradient', 'three-tone', 'bands', 'stripes', 'spiral', 'solid']),
+    color1: hsl(h, rnd(0.3, 0.6), rnd(0.2, 0.35)), color2: hsl((h + rnd(0.05, 0.15)) % 1, rnd(0.4, 0.7), rnd(0.5, 0.65)), color3: hsl((h + 0.5) % 1, 0.25, 0.88),
+    roughness: rnd(0.2, 0.8), clearcoat: rnd(0, 0.8),
+  };
+  applyParams({ ...P, ...o }, 'New random vase');
+});
+
+/* ------------------------------------------------------------------ *
+ *  Viewer tools + dark/light theme
+ * ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+function syncViewTools() {
+  $('vtRotate').setAttribute('aria-pressed', P.autoRotate);
+  $('vtWire').setAttribute('aria-pressed', P.wireframe);
+  $('vtGrid').setAttribute('aria-pressed', P.showGrid);
+  $('vtShadow').setAttribute('aria-pressed', shadowsOn);
+  $('vtSection').setAttribute('aria-pressed', section.on);
+  $('sectionBox').hidden = !section.on;
+}
+const toggleParam = k => { P[k] = !P[k]; inputs[k].set(P[k]); updateMaterial(); };
+$('vtRotate').addEventListener('click', () => toggleParam('autoRotate'));
+$('vtWire').addEventListener('click', () => toggleParam('wireframe'));
+$('vtGrid').addEventListener('click', () => toggleParam('showGrid'));
+$('vtShadow').addEventListener('click', () => { shadowsOn = !shadowsOn; updateMaterial(); });
+$('vtSection').addEventListener('click', () => { section.on = !section.on; updateSection(); updateMaterial(); });
+$('secAxis').addEventListener('change', e => { section.axis = e.target.value; updateSection(); });
+$('secPos').addEventListener('input', e => { section.pos = +e.target.value; updateSection(); });
+$('secFlip').addEventListener('change', e => { section.flip = e.target.checked; updateSection(); });
+const stopSpin = () => { if (P.autoRotate) toggleParam('autoRotate'); };
+$('vtFront').addEventListener('click', () => { stopSpin(); frame('front'); });
+$('vtSide').addEventListener('click', () => { stopSpin(); frame('side'); });
+$('vtTop').addEventListener('click', () => { stopSpin(); frame('top'); });
+$('vtReset').addEventListener('click', () => frame('iso'));
+
+/* quick colour picker */
+const PALETTES = [
+  ['Teal & amber', '#2f6f73', '#d9a35b', '#efe7da'], ['Terracotta', '#8a3b24', '#c96f4a', '#f0d9c4'],
+  ['Celadon', '#3f6b5a', '#9cc3a7', '#eef3e6'], ['Cobalt', '#1d3557', '#457b9d', '#e7eef5'],
+  ['Ink & gold', '#1c1c1e', '#b8892f', '#f2e3b3'], ['Blush', '#8e4a5a', '#e3a3a8', '#fbeef0'],
+  ['Sunset', '#5b1f4b', '#e3683b', '#f7c548'], ['Ocean', '#0b3954', '#087e8b', '#bfd7ea'],
+  ['Matcha', '#4a5a2b', '#a3b86c', '#f1f0dc'], ['Lavender', '#3b3f8f', '#8f6bd1', '#e6dcf7'],
+  ['Mono', '#222222', '#8a8a8a', '#f2f2f2'], ['Neon', '#2b0b3f', '#ff3d81', '#3df5ff'],
+];
+const SOLIDS = [
+  ['White', '#f4f1ea'], ['Black', '#1d1d1f'], ['Red', '#b3261e'], ['Orange', '#e07a2f'], ['Yellow', '#e9c46a'], ['Green', '#2a9d6f'],
+  ['Blue', '#2a6fdb'], ['Purple', '#6a4bc4'], ['Pink', '#e48aa8'], ['Brown', '#7a4e2d'], ['Grey', '#8a8f96'], ['Gold', '#c9a14a'],
+];
+const MODES = ['solid', 'gradient', 'three-tone', 'bands', 'stripes', 'spiral'];
+function setColors(o) {
+  Object.assign(P, o);
+  ['color1', 'color2', 'color3', 'colorMode'].forEach(k => inputs[k].set(P[k]));
+  changed('color1');
+}
+PALETTES.forEach(([name, a, b, c]) => {
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'cp-pal'; el.title = name;
+  el.innerHTML = `<span class="bar"><i style="background:${a}"></i><i style="background:${b}"></i><i style="background:${c}"></i></span>${name}`;
+  el.addEventListener('click', () => setColors({ color1: a, color2: b, color3: c, colorMode: P.colorMode === 'solid' ? 'three-tone' : P.colorMode }));
+  $('cpPalettes').appendChild(el);
+});
+SOLIDS.forEach(([name, hex]) => {
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'cp-dot'; el.title = name; el.setAttribute('aria-label', name + ' glaze');
+  el.style.background = hex;
+  el.addEventListener('click', () => {
+    setColors({ color1: hex, colorMode: 'solid' });
+    if (name === 'Gold') { P.metalness = 0.85; P.roughness = 0.3; inputs.metalness.set(P.metalness); inputs.roughness.set(P.roughness); updateMaterial(); }
+  });
+  $('cpSolids').appendChild(el);
+});
+MODES.forEach(m => {
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'vt cp-mode'; el.textContent = m; el.dataset.mode = m;
+  el.addEventListener('click', () => setColors({ colorMode: m }));
+  $('cpModes').appendChild(el);
+});
+function paintColorUI() {
+  const cols = P.colorMode === 'solid' ? [P.color1, P.color1] : P.colorMode === 'three-tone' ? [P.color1, P.color2, P.color3] : [P.color1, P.color2];
+  $('vtColorSw').style.background = `linear-gradient(135deg, ${cols.join(', ')})`;
+  document.querySelectorAll('.cp-pal').forEach((el, i) => el.setAttribute('aria-pressed', PALETTES[i][1] === P.color1 && PALETTES[i][2] === P.color2));
+  document.querySelectorAll('.cp-dot').forEach((el, i) => el.setAttribute('aria-pressed', P.colorMode === 'solid' && SOLIDS[i][1] === P.color1));
+  document.querySelectorAll('.cp-mode').forEach(el => el.setAttribute('aria-pressed', el.dataset.mode === P.colorMode));
+}
+const openPop = open => { $('colorPop').hidden = !open; $('vtColor').setAttribute('aria-expanded', open); };
+$('vtColor').addEventListener('click', e => { e.stopPropagation(); openPop($('colorPop').hidden); });
+document.addEventListener('click', e => { if (!$('colorPop').hidden && !e.target.closest('#colorPop')) openPop(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') openPop(false); });
+
+const mql = window.matchMedia('(prefers-color-scheme: light)');
+const effectiveTheme = () => document.documentElement.dataset.theme || (mql.matches ? 'light' : 'dark');
+function applyTheme(t) {
+  if (t) document.documentElement.dataset.theme = t;
+  const cur = effectiveTheme();
+  $('btnTheme').textContent = cur === 'dark' ? '☀ Light mode' : '☾ Dark mode';
+  makeGrid(); updateMaterial();
+}
+$('btnTheme').addEventListener('click', () => {
+  const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('vase-theme', next); } catch {}
+  applyTheme(next);
+});
+mql.addEventListener('change', () => applyTheme());
+let savedTheme = null;
+try { savedTheme = localStorage.getItem('vase-theme'); } catch {}
+
+applyTheme(savedTheme);
+rebuild();
+resize();
+frame('iso');
+loop();

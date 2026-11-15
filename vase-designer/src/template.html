@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vase Studio 3D</title>
+<style>
+/*__FONTS__*/
+/* Layout: control rail on the left (scrolls), live 3D kiln on the right; stacks on phones. */
+:root {
+  --bg: #15171a;
+  --panel: #1c1f23;
+  --panel-2: #23272c;
+  --line: #2f343a;
+  --fg: #e8e4dc;
+  --muted: #9a9890;
+  --accent: #d9a35b;      /* raw clay / amber glaze */
+  --accent-ink: #1a1408;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --scene-bg: #1b1e22;
+  --grid-a: #666a70;
+  --grid-b: #3a3e44;
+  --cut: #e0603a;         /* section cut-face colour */
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f1ec; --panel: #fbfaf7; --panel-2: #efece6; --line: #dcd7ce; --fg: #23211d; --muted: #6f6a61;
+    --accent: #b97a2a; --accent-ink: #fffaf2; --scene-bg: #e9e6e0; --grid-a: #9a958c; --grid-b: #cfcac1; --cut: #d0502c;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f1ec; --panel: #fbfaf7; --panel-2: #efece6; --line: #dcd7ce; --fg: #23211d; --muted: #6f6a61;
+  --accent: #b97a2a; --accent-ink: #fffaf2; --scene-bg: #e9e6e0; --grid-a: #9a958c; --grid-b: #cfcac1; --cut: #d0502c;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 14px/1.45 var(--font-body);
+  display: grid; grid-template-columns: 360px 1fr; overflow: hidden;
+}
+aside {
+  background: var(--panel); border-right: 1px solid var(--line);
+  overflow-y: auto; min-width: 0;
+  padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.brand h1 { font: 700 22px/1.1 var(--font-display); margin: 0; letter-spacing: -0.01em; }
+.brand span { font: 500 11px var(--font-mono); color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+.sub { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
+
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip {
+  font: 500 12px var(--font-body); color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); }
+.chip:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+details { border-top: 1px solid var(--line); }
+details:last-of-type { border-bottom: 1px solid var(--line); }
+summary {
+  list-style: none; cursor: pointer; padding: 11px 2px; display: flex; justify-content: space-between; align-items: center;
+  font: 600 12px var(--font-body); letter-spacing: .09em; text-transform: uppercase;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font: 400 16px var(--font-mono); color: var(--muted); }
+details[open] summary::after { content: "–"; }
+summary small { font: 400 11px var(--font-mono); color: var(--muted); letter-spacing: 0; text-transform: none; margin-left: auto; margin-right: 10px; }
+.group { display: grid; gap: 9px; padding: 2px 2px 14px; }
+
+.row { display: grid; grid-template-columns: 1fr 64px; gap: 4px 8px; align-items: center; }
+.row label { font-size: 12.5px; color: var(--fg); grid-column: 1 / -1; display: flex; justify-content: space-between; }
+.row label em { font-style: normal; font: 400 11px var(--font-mono); color: var(--muted); }
+.row input[type=number] {
+  width: 64px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  font: 12px var(--font-mono); padding: 3px 5px; text-align: right; font-variant-numeric: tabular-nums;
+}
+input[type=range] { width: 100%; accent-color: var(--accent); height: 18px; margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.sel { display: grid; grid-template-columns: 1fr 1.2fr; gap: 8px; align-items: center; font-size: 12.5px; }
+.sel select, .colr input {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px; font: 12.5px var(--font-body);
+}
+.colr { display: grid; grid-template-columns: 1fr 44px 74px; gap: 8px; align-items: center; font-size: 12.5px; }
+.colr input[type=color] { padding: 1px; height: 28px; width: 44px; cursor: pointer; }
+.colr code { font: 11px var(--font-mono); color: var(--muted); text-align: right; }
+
+main { position: relative; min-width: 0; display: grid; grid-template-rows: auto 1fr; }
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-block: 10px;
+  padding-left: 16px; padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.toolbar .spacer { flex: 1; }
+button {
+  font: 500 13px var(--font-body); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 12px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button.export { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button.export:hover { filter: brightness(1.08); }
+#viewport { position: relative; min-height: 0; }
+#viewport canvas { display: block; width: 100%; height: 100%; }
+.stats {
+  position: absolute; left: 14px; bottom: 14px; display: grid; grid-template-columns: auto auto; gap: 2px 14px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font: 11.5px var(--font-mono); font-variant-numeric: tabular-nums; backdrop-filter: blur(6px);
+}
+.stats dt { color: var(--muted); }
+.stats dd { margin: 0; text-align: right; }
+.toast {
+  position: absolute; right: 14px; bottom: 14px; background: var(--accent); color: var(--accent-ink);
+  font: 600 12.5px var(--font-body); padding: 8px 12px; border-radius: 8px; opacity: 0; transition: opacity .25s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+button.export-all { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 600; }
+button[disabled] { opacity: .55; cursor: progress; }
+.export-group { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* viewer tools, floating over the 3D view */
+.viewtools {
+  position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; z-index: 3;
+}
+.vt-row { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end;
+  background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 4px; backdrop-filter: blur(6px); }
+.vt { font: 500 12px var(--font-body); padding: 5px 9px; border-radius: 7px; background: transparent; border: 1px solid transparent; }
+.vt:hover { border-color: var(--line); }
+.vt[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.section-box {
+  display: grid; gap: 8px; width: 230px; font-size: 12.5px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 10px; padding: 10px; backdrop-filter: blur(6px);
+}
+.section-box .line { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.section-box select { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 5px; font: 12px var(--font-body); }
+.section-box output { font: 11.5px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.vt-color { display: inline-flex; align-items: center; gap: 6px; }
+.vt-color .sw { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); }
+.color-pop {
+  width: 272px; max-height: 60vh; overflow-y: auto; display: grid; gap: 8px; padding: 10px;
+  background: color-mix(in srgb, var(--panel) 95%, transparent); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(6px);
+}
+.cp-title { font: 600 10.5px var(--font-body); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.cp-palettes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cp-pal { display: grid; gap: 4px; padding: 4px; border-radius: 8px; background: transparent; border: 1px solid transparent; font: 11px var(--font-body); color: var(--fg); text-align: left; }
+.cp-pal:hover, .cp-pal[aria-pressed="true"] { border-color: var(--accent); }
+.cp-pal .bar { display: flex; height: 18px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+.cp-pal .bar i { flex: 1; }
+.cp-solids { display: flex; flex-wrap: wrap; gap: 6px; }
+.cp-dot { width: 24px; height: 24px; border-radius: 50%; padding: 0; border: 2px solid var(--line); }
+.cp-dot:hover, .cp-dot[aria-pressed="true"] { border-color: var(--accent); }
+.cp-modes { display: flex; flex-wrap: wrap; gap: 4px; }
+.cp-mode { font: 500 11.5px var(--font-body); padding: 4px 8px; border-radius: 999px; }
+.cp-mode[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.hint { position: absolute; left: 14px; top: 12px; font: 11px var(--font-mono); color: var(--muted); pointer-events: none; }
+@media (max-width: 820px) { .hint { display: none; } .viewtools { top: 8px; right: 8px; } .vt { padding: 4px 7px; font-size: 11.5px; } }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 13px var(--font-mono); }
+
+@media (max-width: 820px) {
+  body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow: auto; height: auto; min-height: 100%; }
+  main { grid-row: 1; height: 72vh; position: sticky; top: 0; z-index: 2; }
+  aside { grid-row: 2; border-right: 0; padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow: visible; }
+  .stats { display: none; }
+  .section-box { width: 200px; }
+  .color-pop { width: 236px; max-height: 44vh; }
+  .toolbar { gap: 6px; } .toolbar button { padding: 6px 9px; font-size: 12.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+</head>
+<body>
+<aside id="panel">
+  <div class="brand"><h1>Vase Studio</h1><span>3D · parametric</span></div>
+  <p class="sub">Shape a vase with the sliders, then export it for printing or rendering. All sizes in millimetres.</p>
+  <div class="presets" id="presets"></div>
+  <div id="controls"></div>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <button id="btnRandom" type="button">Randomize</button>
+    <button id="btnReset" type="button">Reset</button>
+    <button id="btnSave" type="button">Save .json</button>
+    <button id="btnLoad" type="button">Load .json</button>
+    <input id="fileLoad" type="file" accept=".json,application/json" hidden>
+    <button id="btnTheme" type="button" aria-label="Switch dark / light mode">◐ Light</button>
+    <span class="spacer"></span>
+    <div class="export-group" role="group" aria-label="Export">
+      <button class="export" id="btnSTL" type="button">STL</button>
+      <button class="export" id="btnOBJ" type="button">OBJ</button>
+      <button class="export" id="btnGLB" type="button">GLB</button>
+      <button class="export" id="btnPNG" type="button">PNG</button>
+      <button class="export-all" id="btnALL" type="button">Export all (.zip)</button>
+    </div>
+  </div>
+  <div id="viewport">
+    <div class="loading" id="loading">Loading 3D engine…</div>
+    <div class="hint">drag: rotate · right-drag: pan · scroll: zoom</div>
+    <div class="viewtools">
+      <div class="vt-row" role="toolbar" aria-label="Viewer">
+        <button class="vt" id="vtRotate" type="button" aria-pressed="true">Auto-rotate</button>
+        <button class="vt" id="vtWire" type="button" aria-pressed="false">Wireframe</button>
+        <button class="vt" id="vtSection" type="button" aria-pressed="false">Section cut</button>
+        <button class="vt" id="vtGrid" type="button" aria-pressed="true">Grid</button>
+        <button class="vt" id="vtShadow" type="button" aria-pressed="true">Shadow</button>
+        <button class="vt vt-color" id="vtColor" type="button" aria-expanded="false" aria-controls="colorPop"><span class="sw" id="vtColorSw"></span>Colors</button>
+      </div>
+      <div class="color-pop" id="colorPop" hidden>
+        <div class="cp-title">Palettes</div>
+        <div class="cp-palettes" id="cpPalettes"></div>
+        <div class="cp-title">Single glaze</div>
+        <div class="cp-solids" id="cpSolids"></div>
+        <div class="cp-title">Pattern</div>
+        <div class="cp-modes" id="cpModes"></div>
+      </div>
+      <div class="vt-row" role="toolbar" aria-label="Camera">
+        <button class="vt" id="vtFront" type="button">Front</button>
+        <button class="vt" id="vtSide" type="button">Side</button>
+        <button class="vt" id="vtTop" type="button">Top</button>
+        <button class="vt" id="vtReset" type="button">Reset view</button>
+      </div>
+      <div class="section-box" id="sectionBox" hidden>
+        <div class="line"><label for="secAxis">Cut plane</label>
+          <select id="secAxis"><option value="x">Vertical (X)</option><option value="z">Vertical (Z)</option><option value="y">Horizontal (Y)</option></select></div>
+        <div class="line"><label for="secPos">Position</label><output id="secOut">50%</output></div>
+        <input type="range" id="secPos" min="0" max="100" step="1" value="50">
+        <label class="check"><input type="checkbox" id="secFlip"> Flip side</label>
+      </div>
+    </div>
+    <dl class="stats" id="stats"></dl>
+    <div class="toast" id="toast"></div>
+  </div>
+</main>
+
+<script type="module">/*__APP__*/</script>
+
+</body>
+</html>
