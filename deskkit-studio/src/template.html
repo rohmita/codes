@@ -101,6 +101,33 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=col
 .tl { top: 14px; left: 14px; display: grid; gap: 8px; justify-items: start; }
 .tr { top: 14px; right: 14px; display: grid; gap: 8px; justify-items: end; }
 .cutpos { width: 110px; }
+.tr { top: 62px; }
+.cq { top: 14px; right: 14px; z-index: 4; }
+.cqbtn { gap: 8px; padding: 6px 10px 6px 8px; cursor: pointer; color: var(--text); font: 500 12px var(--mono); }
+.cqbtn:hover { border-color: var(--accent); }
+.cqbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cqdots { position: relative; width: 31px; height: 20px; display: inline-block; }
+.cqdots i { position: absolute; top: 0; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-2); }
+.cqdots i:first-child { left: 0; z-index: 1; } .cqdots i:last-child { left: 11px; }
+.cqcaret { width: 7px; height: 7px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg) translate(-2px, -2px); transition: transform .15s; }
+.cqbtn[aria-expanded="true"] .cqcaret { transform: rotate(-135deg) translate(-2px, -2px); }
+.cqpop { position: absolute; top: calc(100% + 8px); right: 0; width: 262px; max-width: calc(100vw - 20px); background: var(--hud); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); backdrop-filter: blur(10px); padding: 10px; display: grid; gap: 10px; }
+.cqseg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--panel-2); border-radius: 8px; padding: 3px; }
+.cqt { border: 0; background: transparent; border-radius: 6px; padding: 5px; font: 500 11.5px var(--mono); color: var(--muted); cursor: pointer; }
+.cqt.on { background: var(--accent); color: var(--accent-ink); }
+.cqt:focus-visible { outline: 2px solid var(--accent); }
+.cqgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; }
+.sw { aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18), 0 0 0 1px var(--line); padding: 0; transition: transform .1s; }
+.sw:hover { transform: scale(1.08); }
+.sw.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.cqrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cqcustom { display: flex; align-items: center; gap: 6px; font: 500 11.5px var(--mono); color: var(--muted); cursor: pointer; }
+.cqtt { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.cqfoot { border-top: 1px solid var(--line); padding-top: 9px; }
+.cqmini { flex: 1; border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 7px; padding: 5px 6px; font: 500 11px var(--mono); color: var(--muted); cursor: pointer; }
+.cqmini:hover { color: var(--text); border-color: var(--accent); }
+.cqmini:focus-visible { outline: 2px solid var(--accent); }
 .openbar { padding: 6px 12px; gap: 10px; }
 .openbar .k { font: 500 10.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .openbar input { width: 140px; }
@@ -129,6 +156,7 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=col
   .panel { border-right: 0; }
   .scroll { overflow: visible; }
   .tl { top: 10px; left: 10px; } .tr { top: auto; bottom: 10px; right: 10px; }
+  .cq { top: 10px; right: 10px; } .cqlbl { display: none; }
   .tl .bar:nth-child(2) { display: none; }
   .hud, .legend { display: none; }
   .hud-m { display: block; }
@@ -175,6 +203,22 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=col
         <span class="tb" style="cursor:default">Cut</span>
         <button class="tb on" data-cut="off">Off</button><button class="tb" data-cut="y">Y</button><button class="tb" data-cut="x">X</button><button class="tb" data-cut="z">Z</button>
         <input type="range" class="cutpos" id="cutPos" min="0" max="100" step="0.5" value="50" aria-label="Section position">
+      </div>
+    </div>
+    <div class="ov cq" id="cq">
+      <button class="bar cqbtn" id="cqBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="cqPop" title="Quick colour menu (C)">
+        <span class="cqdots"><i id="cqDotBody"></i><i id="cqDotIn"></i></span><span class="cqlbl">Colour</span><span class="cqcaret" aria-hidden="true"></span>
+      </button>
+      <div class="cqpop" id="cqPop" role="dialog" aria-label="Quick colour menu" hidden>
+        <div class="cqseg" role="radiogroup" aria-label="Colour target">
+          <button class="cqt on" data-ctarget="body" role="radio" aria-checked="true">Body</button><button class="cqt" data-ctarget="interior" role="radio" aria-checked="false">Interior</button>
+        </div>
+        <div class="cqgrid" id="cqGrid"></div>
+        <div class="cqrow">
+          <label class="cqcustom" title="Custom colour"><input type="color" id="cqCustom" aria-label="Custom colour"><span id="cqHex">#000000</span></label>
+          <label class="cqtt"><span>Two-tone</span><span class="switch"><input type="checkbox" id="cqTwo" aria-label="Two-tone preview"><span></span></span></label>
+        </div>
+        <div class="cqrow cqfoot"><button class="cqmini" id="cqSwap" title="Swap body and interior colours">&#8644; Swap</button><button class="cqmini" id="cqRandom" title="Random contrasting pair">&#10022; Random pair</button></div>
       </div>
     </div>
     <div class="ov tr">

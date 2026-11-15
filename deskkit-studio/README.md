@@ -25,6 +25,7 @@ Generator parametrik berbasis browser untuk **desk organizer** siap cetak 3D (FD
 
 - **53 preset** dikelompokkan per jenis objek (dropdown + tombol ‹ › untuk menelusuri), pemilih jenis objek, UI dibangun dari `SCHEMA`.
 - Viewport: mode **Assembled** / **Print plate** (semua part dalam orientasi cetak), slider buka laci, referensi ukuran (pena, ponsel/tablet, kartu, kabel), section cut Y/X/Z, tema gelap/terang, layout mobile.
+- **Quick colour menu** (kanan atas viewport, shortcut `C`): 18 warna filament, target Body/Interior, color picker custom, toggle two-tone, Swap, dan Random pair. Ganti warna tidak melepas preset yang aktif.
 - HUD: ukuran, kapasitas (ml), estimasi filamen (gram & meter, sesuai infill), estimasi waktu cetak, status mesh *watertight*, peringatan.
 - Ekspor: STL plate (Z-up), OBJ berwarna, GLB, PNG 2048 px transparan, JSON, ZIP (plate + STL per part + `PRINT_GUIDE.txt`).
 

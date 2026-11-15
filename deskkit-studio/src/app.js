@@ -319,11 +319,68 @@ function syncUI() {
   }
   for (const det of $$('details.group')) { const g = SCHEMA.find(x => x.id === det.dataset.gid); det.style.display = g.show && !g.show(P) ? 'none' : ''; }
   for (const b of $$('[data-type]')) { const on = b.dataset.type === P.objectType; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
-  const pk = Object.keys(PRESETS).find(k => JSON.stringify({ ...PRESETS[k], viewMode: 0 }) === JSON.stringify({ ...P, viewMode: 0 }));
+  // colours & other live "look" settings don't detach the current preset
+  const shape = o => JSON.stringify(Object.keys(o).filter(k => k !== 'viewMode' && !(PBY[k] && PBY[k].live)).sort().map(k => [k, o[k]]));
+  const cur = shape(P), pk = Object.keys(PRESETS).find(k => shape(PRESETS[k]) === cur);
   $('#presetSel').value = pk || '';
+  syncColorMenu();
   $('#openRange').value = P.drawerOpen; $('#openRange').style.setProperty('--p', `${P.drawerOpen}%`);
   syncToggles();
 }
+// ------------------------------------------------------------------ quick colour menu (top-right)
+const PALETTE = [
+  ['Sage', '#5fae8f'], ['Ivory', '#f2efe6'], ['Matte Black', '#26282b'], ['Space Grey', '#7d838c'], ['Signal Red', '#d9483b'], ['Tangerine', '#f08a3c'],
+  ['Sun Yellow', '#f2c84b'], ['Lime', '#9ccc5a'], ['Teal', '#2a9d8f'], ['Sky Blue', '#6fb3e0'], ['Cobalt', '#3d6fd8'], ['Navy', '#1d3557'],
+  ['Lavender', '#a98bd6'], ['Blush Pink', '#f4a6c1'], ['Terracotta', '#c8674a'], ['Walnut', '#8a5a3c'], ['Silk Gold', '#c9a24d'], ['Mint', '#bfe6d3'],
+];
+let colorTarget = 'body';
+const targetKey = () => (colorTarget === 'body' ? 'colorBody' : 'colorAccent');
+function openColorMenu(on) {
+  const pop = $('#cqPop'), btn = $('#cqBtn');
+  pop.hidden = !on; btn.setAttribute('aria-expanded', String(on));
+  if (on) (pop.querySelector('.sw.on') || pop.querySelector('.sw')).focus({ preventScroll: true });
+}
+function buildColorMenu() {
+  $('#cqGrid').innerHTML = PALETTE.map(([n, h]) => `<button class="sw" data-sw="${h}" style="background:${h}" title="${n}" aria-label="${n}" aria-pressed="false"></button>`).join('');
+  for (const b of $$('[data-sw]')) b.onclick = () => applyColor(b.dataset.sw);
+  for (const b of $$('[data-ctarget]')) b.onclick = () => { colorTarget = b.dataset.ctarget; syncColorMenu(); };
+  $('#cqCustom').addEventListener('input', e => applyColor(e.target.value));
+  $('#cqTwo').addEventListener('change', e => setParam('twoTone', e.target.checked, false));
+  $('#cqSwap').onclick = () => {
+    const b = P.colorBody;
+    P.colorBody = P.colorAccent; P.colorAccent = b; P.twoTone = true;
+    syncUI(); updateMaterials(); updateHUD();
+  };
+  $('#cqRandom').onclick = () => {
+    const pick = () => PALETTE[Math.floor(Math.random() * PALETTE.length)][1];
+    const lum = h => { const c = new THREE.Color(h); return 0.3 * c.r + 0.59 * c.g + 0.11 * c.b; };
+    const a = pick(); let b = pick(), guard = 0;
+    while ((a === b || Math.abs(lum(a) - lum(b)) < 0.18) && guard++ < 60) b = pick();
+    P.colorBody = a; P.colorAccent = b; P.twoTone = true;
+    syncUI(); updateMaterials(); updateHUD();
+  };
+  $('#cqBtn').onclick = e => { e.stopPropagation(); openColorMenu($('#cqPop').hidden); };
+  document.addEventListener('pointerdown', e => { if (!$('#cqPop').hidden && !$('#cq').contains(e.target)) openColorMenu(false); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('#cqPop').hidden) { openColorMenu(false); $('#cqBtn').focus(); }
+    else if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) openColorMenu($('#cqPop').hidden);
+  });
+}
+function applyColor(hex) {
+  P[targetKey()] = hex.toLowerCase();
+  if (colorTarget === 'interior') P.twoTone = true;
+  syncUI(); updateMaterials(); updateHUD();
+}
+function syncColorMenu() {
+  $('#cqDotBody').style.background = P.colorBody;
+  $('#cqDotIn').style.background = P.twoTone ? P.colorAccent : P.colorBody;
+  const cur = String(P[targetKey()]).toLowerCase();
+  for (const b of $$('[data-sw]')) { const on = b.dataset.sw === cur; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
+  for (const b of $$('[data-ctarget]')) { const on = b.dataset.ctarget === colorTarget; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); }
+  $('#cqCustom').value = cur; $('#cqHex').textContent = cur;
+  $('#cqTwo').checked = !!P.twoTone;
+}
+
 let lastCam = 'iso';
 function syncToggles() {
   for (const b of $$('[data-tog]')) b.classList.toggle('on', !!P[b.dataset.tog]);
@@ -495,5 +552,5 @@ $('#loadFile').addEventListener('change', async e => {
 });
 function loop() { controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); }
 
-buildUI(); syncUI(); applyTheme(); resize(); rebuild(); updateMaterials(); fitCamera('iso'); loop();
+buildUI(); buildColorMenu(); syncUI(); applyTheme(); resize(); rebuild(); updateMaterials(); fitCamera('iso'); loop();
 window.__dk = { get P() { return P; }, get model() { return model; }, setParam, doExport, fitCamera, view, guideText };
