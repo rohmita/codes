@@ -84,12 +84,12 @@ input[type=color] { width: 40px; height: 24px; padding: 0; border: 1px solid var
 input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
 .exportbar { border-top: 1px solid var(--line); padding: 12px 18px 14px; display: grid; gap: 8px; background: var(--panel); }
 .exportbar .lbl { font: 500 10.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
-.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .btn { border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 7px; padding: 7px 6px; font: 500 12px var(--mono); cursor: pointer; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-.btn.wide { grid-column: span 2; }
+.btn.wide { grid-column: span 3; }
 .view { position: relative; min-width: 0; min-height: 0; background: var(--viewport); overflow: hidden; }
 #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .ov { position: absolute; z-index: 2; }
@@ -182,10 +182,11 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=col
         <button class="btn primary" data-exp="stl" title="Binary STL, Z-up, mm, parts laid out in print orientation">STL</button>
         <button class="btn" data-exp="obj" title="OBJ with vertex colours (assembled, Y-up, mm)">OBJ</button>
         <button class="btn" data-exp="glb" title="Binary glTF 2.0 (assembled, metres)">GLB</button>
+        <button class="btn" data-exp="fbx" title="FBX 7.4 binary — one object per part, Body/Interior materials, vertex colours (assembled, mm, Y-up)">FBX</button>
         <button class="btn" data-exp="png" title="2048 px transparent render">PNG</button>
         <button class="btn" data-exp="json" title="Save all parameters">JSON</button>
         <button class="btn" id="loadBtn" title="Load parameters from JSON">Load</button>
-        <button class="btn primary wide" data-exp="zip" title="Plate STL + one STL per part + OBJ + GLB + PNG + JSON + PRINT_GUIDE.txt">Export all .zip</button>
+        <button class="btn primary wide" data-exp="zip" title="Plate STL + one STL per part + OBJ + GLB + FBX + PNG + JSON + PRINT_GUIDE.txt">Export all .zip</button>
       </div>
       <input type="file" id="loadFile" accept=".json,application/json" hidden>
     </div>

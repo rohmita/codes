@@ -27,7 +27,7 @@ Generator parametrik berbasis browser untuk **desk organizer** siap cetak 3D (FD
 - Viewport: mode **Assembled** / **Print plate** (semua part dalam orientasi cetak), slider buka laci, referensi ukuran (pena, ponsel/tablet, kartu, kabel), section cut Y/X/Z, tema gelap/terang, layout mobile.
 - **Quick colour menu** (kanan atas viewport, shortcut `C`): 18 warna filament, target Body/Interior, color picker custom, toggle two-tone, Swap, dan Random pair. Ganti warna tidak melepas preset yang aktif.
 - HUD: ukuran, kapasitas (ml), estimasi filamen (gram & meter, sesuai infill), estimasi waktu cetak, status mesh *watertight*, peringatan.
-- Ekspor: STL plate (Z-up), OBJ berwarna, GLB, PNG 2048 px transparan, JSON, ZIP (plate + STL per part + `PRINT_GUIDE.txt`).
+- Ekspor: STL plate (Z-up), OBJ berwarna, GLB, **FBX 7.4 binary** (satu objek per part, material Body/Interior, normal & vertex colour, mm, Y-up — teruji di Blender 4.2 dan three.js FBXLoader), PNG 2048 px transparan, JSON, ZIP (plate + STL per part + FBX + `PRINT_GUIDE.txt`).
 
 ## Jaminan geometri
 
@@ -41,6 +41,7 @@ Uji: `npm test` (atau `node test/objects.test.mjs <seed> <n>`): 53 preset + 1.05
 npm install
 npm run build   # index.html + deskkit-studio-offline.html dari src/
 npm test
+node test/fbx.test.mjs   # semua preset → FBX → dibaca ulang
 ```
 
-`src/geom.js` (kernel solid), `src/objects.js` (resep objek), `src/params.js` (SCHEMA & preset), `src/app.js` (UI & ekspor), `src/template.html`.
+`src/geom.js` (kernel solid), `src/fbx.js` (penulis FBX biner), `src/objects.js` (resep objek), `src/params.js` (SCHEMA & preset), `src/app.js` (UI & ekspor), `src/template.html`.

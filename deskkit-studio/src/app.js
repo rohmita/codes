@@ -8,6 +8,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { zipSync, strToU8 } from 'three/addons/libs/fflate.module.js';
 import { SCHEMA, DEFAULTS, PRESETS, PRESET_GROUPS, OBJECT_TYPES } from './params.js';
 import { buildObject, printedVolume, DENSITY } from './objects.js';
+import { writeFBX } from './fbx.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -469,6 +470,25 @@ function objData() {
   G.dispose();
   return `# DeskKit Studio 3D — ${P.objectType}\n# units: mm, Y-up, assembled\n` + txt;
 }
+// FBX 7.4 binary: one object per part in assembled position, Body/Interior materials,
+// per-corner normals (from the crease-aware render geometry) and sRGB vertex colours
+function fbxData() {
+  const twoTone = !!P.twoTone;
+  const c = new THREE.Color();
+  const parts = items.map(it => {
+    const m = it.part.mesh, M = asmMatrix(it), v = new THREE.Vector3();
+    const pos = new Float64Array(m.pos.length);
+    for (let i = 0; i < pos.length; i += 3) { v.set(m.pos[i], m.pos[i + 1], m.pos[i + 2]).applyMatrix4(M); pos[i] = v.x; pos[i + 1] = v.y; pos[i + 2] = v.z; }
+    const triMat = twoTone ? Uint8Array.from(m.tag, t => (t ? 1 : 0)) : new Uint8Array(m.tag.length);
+    const col = it.geo.attributes.color.array, colors = new Float32Array(col.length);
+    for (let i = 0; i < col.length; i += 3) { c.setRGB(col[i], col[i + 1], col[i + 2]).convertLinearToSRGB(); colors[i] = c.r; colors[i + 1] = c.g; colors[i + 2] = c.b; }
+    return { name: it.part.name, pos, idx: m.idx, triMat, normals: it.geo.attributes.normal.array, colors };
+  });
+  const lin = h => { const k = new THREE.Color(h); return [k.r, k.g, k.b]; };
+  const materials = [{ name: 'Body', color: lin(P.colorBody) }];
+  if (twoTone) materials.push({ name: 'Interior', color: lin(P.colorAccent) });
+  return writeFBX(parts, materials, { creator: 'DeskKit Studio 3D' });
+}
 function glbData() {
   return new Promise((res, rej) => {
     const grp = new THREE.Group();
@@ -507,6 +527,7 @@ async function doExport(kind) {
     if (kind === 'stl') download(stlOf(items, 'plate'), fname('stl'), 'model/stl');
     if (kind === 'obj') download(objData(), fname('obj'), 'text/plain');
     if (kind === 'glb') download(await glbData(), fname('glb'), 'model/gltf-binary');
+    if (kind === 'fbx') download(fbxData(), fname('fbx'), 'application/octet-stream');
     if (kind === 'png') download(await pngData(), fname('png'), 'image/png');
     if (kind === 'json') download(jsonData(), fname('json'), 'application/json');
     if (kind === 'zip') {
@@ -521,6 +542,7 @@ async function doExport(kind) {
       });
       files[fname('obj')] = strToU8(objData());
       files[fname('glb')] = new Uint8Array(await glbData());
+      files[fname('fbx')] = fbxData();
       files[fname('png')] = new Uint8Array(await (await pngData()).arrayBuffer());
       files[fname('json')] = strToU8(jsonData());
       files['PRINT_GUIDE.txt'] = strToU8(guideText());

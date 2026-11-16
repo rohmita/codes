@@ -86,12 +86,12 @@ input[type=color] { width: 40px; height: 24px; padding: 0; border: 1px solid var
 input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
 .exportbar { border-top: 1px solid var(--line); padding: 12px 18px 14px; display: grid; gap: 8px; background: var(--panel); }
 .exportbar .lbl { font: 500 10.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
-.btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .btn { border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 7px; padding: 7px 6px; font: 500 12px var(--mono); cursor: pointer; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-.btn.wide { grid-column: span 2; }
+.btn.wide { grid-column: span 3; }
 .view { position: relative; min-width: 0; min-height: 0; background: var(--viewport); overflow: hidden; }
 #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .ov { position: absolute; z-index: 2; }
@@ -189,10 +189,11 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; } input[type=col
         <button class="btn primary" data-exp="stl" title="Binary STL, Z-up, mm, parts laid out in print orientation">STL</button>
         <button class="btn" data-exp="obj" title="OBJ with vertex colours (assembled, Y-up, mm)">OBJ</button>
         <button class="btn" data-exp="glb" title="Binary glTF 2.0 (assembled, metres)">GLB</button>
+        <button class="btn" data-exp="fbx" title="FBX 7.4 binary — one object per part, Body/Interior materials, vertex colours (assembled, mm, Y-up)">FBX</button>
         <button class="btn" data-exp="png" title="2048 px transparent render">PNG</button>
         <button class="btn" data-exp="json" title="Save all parameters">JSON</button>
         <button class="btn" id="loadBtn" title="Load parameters from JSON">Load</button>
-        <button class="btn primary wide" data-exp="zip" title="Plate STL + one STL per part + OBJ + GLB + PNG + JSON + PRINT_GUIDE.txt">Export all .zip</button>
+        <button class="btn primary wide" data-exp="zip" title="Plate STL + one STL per part + OBJ + GLB + FBX + PNG + JSON + PRINT_GUIDE.txt">Export all .zip</button>
       </div>
       <input type="file" id="loadFile" accept=".json,application/json" hidden>
     </div>
@@ -471,29 +472,29 @@ var MeshBuf = class {
   }
 };
 function rrect(cx, cz, w, d, radii, segs = 8) {
-  const R = Array.isArray(radii) ? radii : [radii, radii, radii, radii];
+  const R2 = Array.isArray(radii) ? radii : [radii, radii, radii, radii];
   const n = 4 * (segs + 1);
   return {
     n,
     pt(i, ins = 0) {
-      const I = typeof ins === "number" ? { r: ins, f: ins, l: ins, b: ins } : ins;
-      const x0 = cx - w / 2 + I.l, x1 = cx + w / 2 - I.r, z0 = cz - d / 2 + I.b, z1 = cz + d / 2 - I.f;
+      const I2 = typeof ins === "number" ? { r: ins, f: ins, l: ins, b: ins } : ins;
+      const x0 = cx - w / 2 + I2.l, x1 = cx + w / 2 - I2.r, z0 = cz - d / 2 + I2.b, z1 = cz + d / 2 - I2.f;
       const k = Math.floor(i / (segs + 1)), j = i % (segs + 1);
       const sx = k === 0 || k === 3 ? 1 : -1, sz = k < 2 ? 1 : -1;
-      const insAdj = [(I.r + I.f) / 2, (I.l + I.f) / 2, (I.l + I.b) / 2, (I.r + I.b) / 2][k];
-      const rad = clamp(R[k] - insAdj, 0.15, Math.max(0.15, Math.min(x1 - x0, z1 - z0) / 2 - 0.05));
+      const insAdj = [(I2.r + I2.f) / 2, (I2.l + I2.f) / 2, (I2.l + I2.b) / 2, (I2.r + I2.b) / 2][k];
+      const rad = clamp(R2[k] - insAdj, 0.15, Math.max(0.15, Math.min(x1 - x0, z1 - z0) / 2 - 0.05));
       const ccx = sx > 0 ? x1 - rad : x0 + rad, ccz = sz > 0 ? z1 - rad : z0 + rad;
       const a = k * Math.PI / 2 + j / segs * (Math.PI / 2);
       return [ccx + rad * Math.cos(a), ccz + rad * Math.sin(a)];
     }
   };
 }
-function rpoly(N, apo, rc, segs = 6, rot = 0, side = 0) {
-  const per = segs + 1 + side, n = N * per;
+function rpoly(N2, apo, rc, segs = 6, rot = 0, side = 0) {
+  const per = segs + 1 + side, n = N2 * per;
   const corner = (k, j, ins) => {
     const a = apo - ins, r = clamp(rc - ins, 0.15, a * 0.9);
-    const a0 = rot + k * 2 * Math.PI / N, a1 = a0 + 2 * Math.PI / N, am = (a0 + a1) / 2;
-    const dc = (a - r) / Math.cos(Math.PI / N), th = a0 + (a1 - a0) * j / segs;
+    const a0 = rot + k * 2 * Math.PI / N2, a1 = a0 + 2 * Math.PI / N2, am = (a0 + a1) / 2;
+    const dc = (a - r) / Math.cos(Math.PI / N2), th = a0 + (a1 - a0) * j / segs;
     return [dc * Math.cos(am) + r * Math.cos(th), dc * Math.sin(am) + r * Math.sin(th)];
   };
   return {
@@ -501,26 +502,26 @@ function rpoly(N, apo, rc, segs = 6, rot = 0, side = 0) {
     pt(i, ins = 0) {
       const k = Math.floor(i / per), j = i % per;
       if (j <= segs) return corner(k, j, ins);
-      const p = corner(k, segs, ins), q = corner((k + 1) % N, 0, ins), f = (j - segs) / (side + 1);
+      const p = corner(k, segs, ins), q = corner((k + 1) % N2, 0, ins), f = (j - segs) / (side + 1);
       return [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f];
     }
   };
 }
-function circle(cx, cz, R, n = 64, lobes = 0, lobeDepth = 0) {
+function circle(cx, cz, R2, n = 64, lobes = 0, lobeDepth = 0) {
   return {
     n,
     pt(i, ins = 0) {
       const th = i / n * 2 * Math.PI;
-      const r = R - ins - (lobes ? lobeDepth * (1 - Math.cos(lobes * th)) / 2 : 0);
+      const r = R2 - ins - (lobes ? lobeDepth * (1 - Math.cos(lobes * th)) / 2 : 0);
       return [cx + r * Math.cos(th), cz + r * Math.sin(th)];
     }
   };
 }
 function triCap(M, loops, normal, tg = 0) {
-  const P3 = M.pos;
+  const P4 = M.pos;
   const ax = Math.abs(normal[0]), ay = Math.abs(normal[1]), az = Math.abs(normal[2]);
   const [iu, iv] = ay >= ax && ay >= az ? [0, 2] : ax >= az ? [2, 1] : [0, 1];
-  const U = (i) => P3[3 * i + iu], V = (i) => P3[3 * i + iv];
+  const U = (i) => P4[3 * i + iu], V = (i) => P4[3 * i + iv];
   const flat = [], contour = [], holes = [];
   loops.forEach((loop2, li) => {
     const arr = loop2.map((i) => new THREE.Vector2(U(i), V(i)));
@@ -581,8 +582,8 @@ function triCap(M, loops, normal, tg = 0) {
   let s = 0;
   for (const t of out) {
     const a = 3 * t[0], b = 3 * t[1], c = 3 * t[2];
-    const ux = P3[b] - P3[a], uy = P3[b + 1] - P3[a + 1], uz = P3[b + 2] - P3[a + 2];
-    const vx = P3[c] - P3[a], vy = P3[c + 1] - P3[a + 1], vz = P3[c + 2] - P3[a + 2];
+    const ux = P4[b] - P4[a], uy = P4[b + 1] - P4[a + 1], uz = P4[b + 2] - P4[a + 2];
+    const vx = P4[c] - P4[a], vy = P4[c + 1] - P4[a + 1], vz = P4[c + 2] - P4[a + 2];
     s += (uy * vz - uz * vy) * normal[0] + (uz * vx - ux * vz) * normal[1] + (ux * vy - uy * vx) * normal[2];
   }
   for (const t of out) s < 0 ? M.t(t[0], t[2], t[1], tg) : M.t(t[0], t[1], t[2], tg);
@@ -707,12 +708,12 @@ function manifoldCheck(M) {
   return { ok: open === 0 && nonManifold === 0 && flipped === 0, open, nonManifold, flipped, shells: M.shells.length };
 }
 function shellVolumes(M) {
-  const P3 = M.pos, I = M.idx;
+  const P4 = M.pos, I2 = M.idx;
   return M.shells.map((sh) => {
     let v = 0;
     for (let i = sh.start; i < sh.end; i += 3) {
-      const a = 3 * I[i], b = 3 * I[i + 1], c = 3 * I[i + 2];
-      v += P3[a] * (P3[b + 1] * P3[c + 2] - P3[b + 2] * P3[c + 1]) - P3[a + 1] * (P3[b] * P3[c + 2] - P3[b + 2] * P3[c]) + P3[a + 2] * (P3[b] * P3[c + 1] - P3[b + 1] * P3[c]);
+      const a = 3 * I2[i], b = 3 * I2[i + 1], c = 3 * I2[i + 2];
+      v += P4[a] * (P4[b + 1] * P4[c + 2] - P4[b + 2] * P4[c + 1]) - P4[a + 1] * (P4[b] * P4[c + 2] - P4[b + 2] * P4[c]) + P4[a + 2] * (P4[b] * P4[c + 1] - P4[b + 1] * P4[c]);
     }
     return v / 6;
   });
@@ -814,11 +815,11 @@ function part(name, M, asm, print, extra = {}) {
   return { name, mesh: M, asm, print, volume: M._vols.reduce((a, b) => a + b, 0), area: M._area, manifold: M._man, ...extra };
 }
 function surfaceArea(M) {
-  const P3 = M.pos, I = M.idx;
+  const P4 = M.pos, I2 = M.idx;
   let a = 0;
-  for (let i = 0; i < I.length; i += 3) {
-    const p = 3 * I[i], q = 3 * I[i + 1], r = 3 * I[i + 2];
-    const ux = P3[q] - P3[p], uy = P3[q + 1] - P3[p + 1], uz = P3[q + 2] - P3[p + 2], vx = P3[r] - P3[p], vy = P3[r + 1] - P3[p + 1], vz = P3[r + 2] - P3[p + 2];
+  for (let i = 0; i < I2.length; i += 3) {
+    const p = 3 * I2[i], q = 3 * I2[i + 1], r = 3 * I2[i + 2];
+    const ux = P4[q] - P4[p], uy = P4[q + 1] - P4[p + 1], uz = P4[q + 2] - P4[p + 2], vx = P4[r] - P4[p], vy = P4[r + 1] - P4[p + 1], vz = P4[r + 2] - P4[p + 2];
     a += Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2;
   }
   return a;
@@ -838,13 +839,13 @@ function checkPrism(outer, pockets, ys, warn, label) {
       warn.push(`${label}: outline self-intersects at ${y.toFixed(1)} mm`);
       return false;
     }
-    const L = pockets.filter((p) => y >= p.floor - 1e-6).map((p) => sampleLoop(p, y));
-    for (let i = 0; i < L.length; i++) {
-      if (loopsCross(L[i], L[i]) || loopsCross(O, L[i]) || !pointIn(L[i][0], O)) {
+    const L2 = pockets.filter((p) => y >= p.floor - 1e-6).map((p) => sampleLoop(p, y));
+    for (let i = 0; i < L2.length; i++) {
+      if (loopsCross(L2[i], L2[i]) || loopsCross(O, L2[i]) || !pointIn(L2[i][0], O)) {
         warn.push(`${label}: a pocket breaks through the wall at ${y.toFixed(1)} mm`);
         return false;
       }
-      for (let j = i + 1; j < L.length; j++) if (loopsCross(L[i], L[j]) || pointIn(L[i][0], L[j]) || pointIn(L[j][0], L[i])) {
+      for (let j = i + 1; j < L2.length; j++) if (loopsCross(L2[i], L2[j]) || pointIn(L2[i][0], L2[j]) || pointIn(L2[j][0], L2[i])) {
         warn.push(`${label}: pockets overlap at ${y.toFixed(1)} mm`);
         return false;
       }
@@ -852,8 +853,8 @@ function checkPrism(outer, pockets, ys, warn, label) {
   }
   return true;
 }
-function keepsWall(L, O, gap) {
-  for (const p of L) {
+function keepsWall(L2, O, gap) {
+  for (const p of L2) {
     if (!pointIn(p, O)) return false;
     for (let i = 0; i < O.length; i++) {
       const a = O[i], b = O[(i + 1) % O.length], ex = b[0] - a[0], ez = b[1] - a[1], l2 = ex * ex + ez * ez || 1e-12;
@@ -867,13 +868,13 @@ var maxCornerFor = (wall, rIn) => Math.max(0.5, (Math.SQRT2 * wall + (Math.SQRT2
 function plateLoopsFn(cavity, c, d, half, ov, radial) {
   const px = -d[1], pz = d[0];
   return (y) => {
-    const L = sampleLoop(cavity, y);
+    const L2 = sampleLoop(cavity, y);
     let lo = -Infinity, hi = Infinity;
     for (const o of [-half, 0, half]) {
       const ox = c[0] + px * o, oz = c[1] + pz * o;
       let tmin = Infinity, tmax = -Infinity;
-      for (let i = 0; i < L.length; i++) {
-        const a = L[i], b = L[(i + 1) % L.length], ex = b[0] - a[0], ez = b[1] - a[1], den = d[0] * ez - d[1] * ex;
+      for (let i = 0; i < L2.length; i++) {
+        const a = L2[i], b = L2[(i + 1) % L2.length], ex = b[0] - a[0], ez = b[1] - a[1], den = d[0] * ez - d[1] * ex;
         if (Math.abs(den) < 1e-12) continue;
         const t = ((a[0] - ox) * ez - (a[1] - oz) * ex) / den, s = ((a[0] - ox) * d[1] - (a[1] - oz) * d[0]) / den;
         if (s >= 0 && s <= 1) {
@@ -886,30 +887,30 @@ function plateLoopsFn(cavity, c, d, half, ov, radial) {
     }
     lo = radial ? lo : lo - ov;
     hi += ov;
-    const P3 = (s, o) => [c[0] + d[0] * s + px * o, c[1] + d[1] * s + pz * o];
-    return [P3(lo, -half), P3(hi, -half), P3(hi, half), P3(lo, half)];
+    const P4 = (s, o) => [c[0] + d[0] * s + px * o, c[1] + d[1] * s + pz * o];
+    return [P4(lo, -half), P4(hi, -half), P4(hi, half), P4(lo, half)];
   };
 }
 function plateShell(M, name, fn, ys) {
   const shape = { n: 4, at: (i, y) => fn(y)[i] };
   prism(M, { name, y0: ys[0], levels: ys, outer: shape, pockets: [], tagOuter: 0 });
 }
-function penCup(P3, W) {
-  const R = P3.cupDiameter / 2, H = P3.cupHeight;
-  const wall = clamp(P3.cupWall, 1.2, R * 0.3), floor = clamp(P3.cupFloor, 1.2, H * 0.25);
-  const segs = clamp(Math.round(P3.curveSegs / 8), 3, 16);
-  const shapeKind = P3.cupShape;
-  const N = { hexagon: 6, square: 4, octagon: 8 }[shapeKind];
+function penCup(P4, W) {
+  const R2 = P4.cupDiameter / 2, H = P4.cupHeight;
+  const wall = clamp(P4.cupWall, 1.2, R2 * 0.3), floor = clamp(P4.cupFloor, 1.2, H * 0.25);
+  const segs = clamp(Math.round(P4.curveSegs / 8), 3, 16);
+  const shapeKind = P4.cupShape;
+  const N2 = { hexagon: 6, square: 4, octagon: 8 }[shapeKind];
   const flower = shapeKind === "flower";
-  const lobeD = flower ? clamp(P3.fluteDepth, 0.5, R * 0.15) : 0;
-  const base = N ? rpoly(N, R, clamp(P3.cupCorner, 0.6, R * 0.6), segs, Math.PI / 2, Math.max(2, Math.round(P3.curveSegs / N / 2))) : circle(0, 0, R, clamp(P3.curveSegs * 2, 48, 256), flower ? Math.round(P3.flutes) || 8 : 0, lobeD);
-  const pocketBase = flower ? circle(0, 0, R - lobeD, base.n) : base;
-  const taper = clamp(P3.taper, 0.7, 1.3), twist = P3.twist * DEG;
-  const flutes = flower ? 0 : Math.round(P3.flutes), fd = flower ? 0 : P3.fluteDepth;
-  const slant = clamp(P3.slant, 0, 40) * DEG;
+  const lobeD = flower ? clamp(P4.fluteDepth, 0.5, R2 * 0.15) : 0;
+  const base = N2 ? rpoly(N2, R2, clamp(P4.cupCorner, 0.6, R2 * 0.6), segs, Math.PI / 2, Math.max(2, Math.round(P4.curveSegs / N2 / 2))) : circle(0, 0, R2, clamp(P4.curveSegs * 2, 48, 256), flower ? Math.round(P4.flutes) || 8 : 0, lobeD);
+  const pocketBase = flower ? circle(0, 0, R2 - lobeD, base.n) : base;
+  const taper = clamp(P4.taper, 0.7, 1.3), twist = P4.twist * DEG;
+  const flutes = flower ? 0 : Math.round(P4.flutes), fd = flower ? 0 : P4.fluteDepth;
+  const slant = clamp(P4.slant, 0, 40) * DEG;
   let topFn = null, minTop = H;
   if (slant > 0) {
-    const reach = R * Math.max(1, taper);
+    const reach = R2 * Math.max(1, taper);
     let drop = Math.tan(slant) * 2 * reach;
     const maxDrop = H - floor - 20;
     if (drop > maxDrop) {
@@ -920,7 +921,7 @@ function penCup(P3, W) {
     topFn = (x, z) => H - k * (z + reach);
     minTop = H - drop;
   }
-  const cb = clamp(P3.bottomChamfer, 0, 2), tc = topFn ? 0 : clamp(P3.topChamfer, 0, wall * 0.4), lc = topFn ? 0 : Math.min(0.6, wall * 0.3);
+  const cb = clamp(P4.bottomChamfer, 0, 2), tc = topFn ? 0 : clamp(P4.topChamfer, 0, wall * 0.4), lc = topFn ? 0 : Math.min(0.6, wall * 0.3);
   const yS = topFn ? minTop - 1 : H;
   const sc = (y) => 1 + (taper - 1) * y / H, rot = (y) => twist * Math.min(y, yS) / H;
   const xf = (p, y) => {
@@ -939,7 +940,7 @@ function penCup(P3, W) {
       return xf(p, y);
     }
   };
-  const rs = clamp(P3.cupScoop, 0, R * 0.5);
+  const rs = clamp(P4.cupScoop, 0, R2 * 0.5);
   const pocket = {
     n: pocketBase.n,
     floor,
@@ -949,13 +950,13 @@ function penCup(P3, W) {
       return xf(pocketBase.pt(i, (wall + scoopIns(y, floor, rs) + lipIns(y, H, lc)) / s), y);
     }
   };
-  const step = Math.min(H / clamp(P3.heightSegs, 8, 200), twist ? 1.5 : 50);
-  const L = lv(0, yS, [cb, floor, H - tc, H - lc, ...scoopBreaks(floor, rs)], step);
+  const step = Math.min(H / clamp(P4.heightSegs, 8, 200), twist ? 1.5 : 50);
+  const L2 = lv(0, yS, [cb, floor, H - tc, H - lc, ...scoopBreaks(floor, rs)], step);
   pocket.levels = lv(floor, yS, [...scoopBreaks(floor, rs), H - lc], step);
   checkPrism(outer, [pocket], [floor + 0.2, (floor + yS) / 2, yS], W, "Cup");
   const M = new MeshBuf();
-  prism(M, { name: "cup", y0: 0, levels: L, top: topFn, band: 8, outer, pockets: [pocket] });
-  const div = P3.cupDivider;
+  prism(M, { name: "cup", y0: 0, levels: L2, top: topFn, band: 8, outer, pockets: [pocket] });
+  const div = P4.cupDivider;
   const divTop = minTop - 12;
   if (div !== "none" && divTop > floor + 10) {
     const ys = lv(floor - 0.3, divTop, [floor, ...scoopBreaks(floor, rs)], 4);
@@ -973,7 +974,7 @@ function penCup(P3, W) {
     prevY = y;
   }
   const refs = [];
-  const rIn = (R - wall) * Math.min(1, taper) - 6;
+  const rIn = (R2 - wall) * Math.min(1, taper) - 6;
   const nPens = clamp(Math.round(rIn / 4), 1, 9);
   for (let k = 0; k < nPens; k++) {
     const a = k * 2.399, r = k ? rIn * Math.sqrt(k / nPens) : 0;
@@ -1010,20 +1011,20 @@ function rrExtent(w, d, r, u) {
   const q = ax - (w / 2 - r);
   return d / 2 - r + Math.sqrt(Math.max(r * r - q * q, 0));
 }
-function tray2(P3, W) {
-  const Wd = P3.trayWidth, D = P3.trayDepth, H = P3.trayHeight;
-  const wall = clamp(P3.trayWall, 1.2, Math.min(Wd, D) * 0.15), floor = clamp(P3.trayFloor, 1.2, H * 0.4);
-  const rc = clamp(P3.trayCorner, 0.5, Math.min(Wd, D) * 0.4), segs = clamp(Math.round(P3.curveSegs / 8), 3, 16);
-  const cb = clamp(P3.bottomChamfer, 0, 2), tc = clamp(P3.topChamfer, 0, wall * 0.4), lc = Math.min(0.6, wall * 0.3);
-  const t = clamp(P3.trayDivider, 1, 6);
+function tray2(P4, W) {
+  const Wd = P4.trayWidth, D2 = P4.trayDepth, H = P4.trayHeight;
+  const wall = clamp(P4.trayWall, 1.2, Math.min(Wd, D2) * 0.15), floor = clamp(P4.trayFloor, 1.2, H * 0.4);
+  const rc = clamp(P4.trayCorner, 0.5, Math.min(Wd, D2) * 0.4), segs = clamp(Math.round(P4.curveSegs / 8), 3, 16);
+  const cb = clamp(P4.bottomChamfer, 0, 2), tc = clamp(P4.topChamfer, 0, wall * 0.4), lc = Math.min(0.6, wall * 0.3);
+  const t = clamp(P4.trayDivider, 1, 6);
   const lcT = Math.min(lc, t * 0.3);
-  const Wi = Wd - 2 * wall, Di = D - 2 * wall;
-  let cols = clamp(Math.round(P3.trayCols), 1, 8), rows = clamp(Math.round(P3.trayRows), 1, 8);
+  const Wi = Wd - 2 * wall, Di = D2 - 2 * wall;
+  let cols = clamp(Math.round(P4.trayCols), 1, 8), rows = clamp(Math.round(P4.trayRows), 1, 8);
   while (cols > 1 && (Wi - (cols - 1) * t) / cols < 12) cols--;
   while (rows > 1 && (Di - (rows - 1) * t) / rows < 12) rows--;
-  if (cols < P3.trayCols || rows < P3.trayRows) W.push(`Compartments reduced to ${cols} \xD7 ${rows} (minimum 12 mm per cell).`);
-  const cells = trayCells(P3.trayLayout, cols, rows, Wi, Di, t);
-  const slab0 = P3.trayDividerHeight < 0.999;
+  if (cols < P4.trayCols || rows < P4.trayRows) W.push(`Compartments reduced to ${cols} \xD7 ${rows} (minimum 12 mm per cell).`);
+  const cells = trayCells(P4.trayLayout, cols, rows, Wi, Di, t);
+  const slab0 = P4.trayDividerHeight < 0.999;
   let rcEff = rc;
   if (!slab0) {
     const near = (v, w) => Math.abs(v - w) < 1e-6;
@@ -1034,10 +1035,10 @@ function tray2(P3, W) {
     rcEff = Math.max(0.5, rcEff);
     if (rcEff < rc - 0.05) W.push(`Outer corner radius limited to ${rcEff.toFixed(1)} mm by the corner compartments.`);
   }
-  const body = rrect(0, 0, Wd, D, rcEff, segs);
+  const body = rrect(0, 0, Wd, D2, rcEff, segs);
   const outer = { n: body.n, at: (i, y) => body.pt(i, chamB(y, 0, cb) + chamT(y, H, tc)) };
-  const rs = clamp(P3.trayScoop, 0, (H - floor) * 0.6);
-  const slab = P3.trayDividerHeight < 0.999;
+  const rs = clamp(P4.trayScoop, 0, (H - floor) * 0.6);
+  const slab = P4.trayDividerHeight < 0.999;
   const pockets = [];
   const mkPocket = (cx, cz, w, d, r) => {
     const sh = rrect(cx, cz, w, d, r, segs);
@@ -1054,7 +1055,7 @@ function tray2(P3, W) {
   } else {
     const near = (v, w) => Math.abs(v - w) < 1e-6;
     for (const c of cells) {
-      const w = c.x1 - c.x0, d = c.z1 - c.z0, lim = Math.min(w, d) / 2 - 0.4, pr = clamp(P3.trayPocketRadius, 0.6, lim);
+      const w = c.x1 - c.x0, d = c.z1 - c.z0, lim = Math.min(w, d) / 2 - 0.4, pr = clamp(P4.trayPocketRadius, 0.6, lim);
       const cc = Math.min(lim, Math.max(pr, rcEff - wall));
       const radii = [
         near(c.x1, Wi / 2) && near(c.z1, Di / 2) ? cc : pr,
@@ -1067,23 +1068,23 @@ function tray2(P3, W) {
     }
   }
   const under = [];
-  if (P3.trayFeet !== "none") {
-    const [dia, dep] = P3.trayFeet === "magnets 6x2" ? [6.3, 2.2] : [10.4, 1.2];
-    if (floor - dep < 0.8) W.push(`Floor too thin for ${P3.trayFeet} recesses (needs \u2265 ${(dep + 0.8).toFixed(1)} mm) \u2014 recesses omitted.`);
+  if (P4.trayFeet !== "none") {
+    const [dia, dep] = P4.trayFeet === "magnets 6x2" ? [6.3, 2.2] : [10.4, 1.2];
+    if (floor - dep < 0.8) W.push(`Floor too thin for ${P4.trayFeet} recesses (needs \u2265 ${(dep + 0.8).toFixed(1)} mm) \u2014 recesses omitted.`);
     else {
       const m = Math.max(dia / 2 + 3, rc * 0.45 + dia / 2 + 1.5);
       for (const [sx, sz] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) {
-        const ci = circle(sx * (Wd / 2 - m), sz * (D / 2 - m), dia / 2, 32);
+        const ci = circle(sx * (Wd / 2 - m), sz * (D2 / 2 - m), dia / 2, 32);
         under.push({ n: ci.n, depth: dep, at: (i, y) => ci.pt(i, 0) });
       }
     }
   }
-  const L = lv(0, H, [cb, floor, H - tc], 50);
+  const L2 = lv(0, H, [cb, floor, H - tc], 50);
   checkPrism(outer, pockets, [floor + 0.2, (floor + H) / 2, H - 0.05], W, "Tray");
   const M = new MeshBuf();
-  prism(M, { name: "tray", y0: 0, levels: L, outer, pockets, under });
+  prism(M, { name: "tray", y0: 0, levels: L2, outer, pockets, under });
   if (slab) {
-    const top = floor + (H - floor) * clamp(P3.trayDividerHeight, 0.2, 1);
+    const top = floor + (H - floor) * clamp(P4.trayDividerHeight, 0.2, 1);
     const ri = Math.max(rc - wall, 0.8);
     const done = /* @__PURE__ */ new Set();
     for (const a of cells) for (const b of cells) {
@@ -1102,12 +1103,12 @@ function tray2(P3, W) {
       if (done.has(key)) continue;
       done.add(key);
       if (rect.axis === "z") {
-        const xm = (rect.x0 + rect.x1) / 2, ext = rrExtent(Wi, Di, ri, xm), extO = rrExtent(Wd, D, rcEff, xm);
+        const xm = (rect.x0 + rect.x1) / 2, ext = rrExtent(Wi, Di, ri, xm), extO = rrExtent(Wd, D2, rcEff, xm);
         const into = Math.min(0.6, extO - ext - 0.5);
         rect.z0 = rect.z0 <= -Di / 2 + 1e-6 ? -ext - into : rect.z0 - t;
         rect.z1 = rect.z1 >= Di / 2 - 1e-6 ? ext + into : rect.z1 + t;
       } else {
-        const zm = (rect.z0 + rect.z1) / 2, ext = rrExtent(Di, Wi, ri, zm), extO = rrExtent(D, Wd, rcEff, zm);
+        const zm = (rect.z0 + rect.z1) / 2, ext = rrExtent(Di, Wi, ri, zm), extO = rrExtent(D2, Wd, rcEff, zm);
         const into = Math.min(0.6, extO - ext - 0.5);
         rect.x0 = rect.x0 <= -Wi / 2 + 1e-6 ? -ext - into : rect.x0 - t;
         rect.x1 = rect.x1 >= Wi / 2 - 1e-6 ? ext + into : rect.x1 + t;
@@ -1119,11 +1120,11 @@ function tray2(P3, W) {
   }
   return { parts: [part("Tray", M, { p: [0, 0, 0] }, { r: [0, 0, 0] })], refs: [], capacity: cap / 1e3 };
 }
-function penBlock(P3, W) {
-  const n = clamp(Math.round(P3.blockTiers), 1, 4), Wd = P3.blockWidth, td = P3.tierDepth;
-  const h0 = P3.blockBaseHeight, step = P3.blockStep, floor = 2.4, wallMin = 1.6;
-  const rc = clamp(P3.blockCorner, 0.5, Math.min(Wd, td) * 0.45), segs = clamp(Math.round(P3.curveSegs / 8), 3, 16);
-  const cb = clamp(P3.bottomChamfer, 0, 2), tc = clamp(P3.topChamfer, 0, 1.5);
+function penBlock(P4, W) {
+  const n = clamp(Math.round(P4.blockTiers), 1, 4), Wd = P4.blockWidth, td = P4.tierDepth;
+  const h0 = P4.blockBaseHeight, step = P4.blockStep, floor = 2.4, wallMin = 1.6;
+  const rc = clamp(P4.blockCorner, 0.5, Math.min(Wd, td) * 0.45), segs = clamp(Math.round(P4.curveSegs / 8), 3, 16);
+  const cb = clamp(P4.bottomChamfer, 0, 2), tc = clamp(P4.topChamfer, 0, 1.5);
   const Dt = n * td;
   const parts = [], refs = [];
   let cap = 0;
@@ -1139,7 +1140,7 @@ function penBlock(P3, W) {
     } };
     const zc = Dt / 2 - i * td - td / 2;
     const pockets = [];
-    const type = i === 0 && n > 1 ? P3.frontTier : i === 0 && n === 1 ? P3.frontTier : "holes";
+    const type = i === 0 && n > 1 ? P4.frontTier : i === 0 && n === 1 ? P4.frontTier : "holes";
     if (type === "tray") {
       const w = Wd - 2 * 2.4, d = td - 2 * 2.4, lim = Math.min(w, d) / 2 - 0.5, r = Math.min(4, lim);
       const rf = i === 0 ? Math.min(lim, Math.max(r, rc - 2.4)) : r, rb = i === n - 1 ? Math.min(lim, Math.max(r, rc - 2.4)) : r;
@@ -1175,10 +1176,10 @@ function penBlock(P3, W) {
       cap += sw * sT * (h - floor);
       refs.push({ kind: "box", size: [75, 150, 9], pos: [0, floor + 75 * Math.cos(tilt), z0 - Math.tan(tilt) * 75 * Math.cos(tilt)], rot: [-tilt, 0, 0] });
     } else {
-      let dia = clamp(P3.holeDia, 6, 40);
-      const cnt = clamp(Math.round(P3.holesPerTier), 1, 12);
-      let rowsN = P3.holeRows === "staggered" && td >= 2 * dia + 3 * wallMin ? 2 : 1;
-      if (P3.holeRows === "staggered" && rowsN === 1) W.push("Tier too shallow for staggered holes \u2014 single row used.");
+      let dia = clamp(P4.holeDia, 6, 40);
+      const cnt = clamp(Math.round(P4.holesPerTier), 1, 12);
+      let rowsN = P4.holeRows === "staggered" && td >= 2 * dia + 3 * wallMin ? 2 : 1;
+      if (P4.holeRows === "staggered" && rowsN === 1) W.push("Tier too shallow for staggered holes \u2014 single row used.");
       const pitch = (Wd - 2 * wallMin) / cnt;
       if (dia > pitch - wallMin) {
         dia = pitch - wallMin;
@@ -1188,7 +1189,7 @@ function penBlock(P3, W) {
         dia = td - 2 * wallMin;
         W.push(`Hole \xD8 reduced to ${dia.toFixed(1)} mm to fit the tier depth.`);
       }
-      const depth = clamp(P3.holeDepth, 8, h - floor);
+      const depth = clamp(P4.holeDepth, 8, h - floor);
       const pf = h - depth;
       const rs = Math.min(dia / 2 - 0.4, 3);
       const centers = [];
@@ -1201,7 +1202,7 @@ function penBlock(P3, W) {
       let dropped = 0;
       const placed = [];
       for (const [cx, cz] of centers) {
-        const ci = circle(cx, cz, dia / 2, clamp(P3.curveSegs, 24, 96));
+        const ci = circle(cx, cz, dia / 2, clamp(P4.curveSegs, 24, 96));
         const ring = [];
         for (let k = 0; k < ci.n; k += 2) ring.push(ci.pt(k, -0.8));
         if (!keepsWall(ring, Otop, 1.2) || !keepsWall(ring, Obot, 1.2) || placed.some(([x, z]) => Math.hypot(x - cx, z - cz) < dia + 2 * 0.8 + 1.2)) {
@@ -1220,12 +1221,12 @@ function penBlock(P3, W) {
     const under = [];
     const minFloor = Math.min(...pockets.map((p) => p.floor), h);
     const hf = minFloor - 2.4;
-    if (P3.blockHollow && hf >= 8) {
+    if (P4.blockHollow && hf >= 8) {
       const m = 3.2, wu = Wd - 2 * m, du = td - 2 * m;
       if (wu > 12 && du > 12) {
-        const R = Math.min(hf - 1.5, Math.min(wu, du) / 2 - 3);
+        const R2 = Math.min(hf - 1.5, Math.min(wu, du) / 2 - 3);
         const us = rrect(0, zc, wu, du, Math.max(1, rc - m), segs);
-        under.push({ n: us.n, depth: hf, tag: 0, at: (k, y) => us.pt(k, Math.max(0, y - (hf - R))), levels: lv(0, hf, [hf - R], 2) });
+        under.push({ n: us.n, depth: hf, tag: 0, at: (k, y) => us.pt(k, Math.max(0, y - (hf - R2))), levels: lv(0, hf, [hf - R2], 2) });
       }
     }
     checkPrism(outer, pockets, [floor + 0.2, h / 2, h - 0.05], W, `Tier ${i + 1}`);
@@ -1235,45 +1236,45 @@ function penBlock(P3, W) {
   return { parts, refs, capacity: cap / 1e3 };
 }
 var DEVICES = { phone: { t: 9.5, h: 160, w: 76 }, "phone + case": { t: 12.5, h: 165, w: 80 }, tablet: { t: 8, h: 250, w: 175 }, "tablet + case": { t: 14, h: 255, w: 182 } };
-function phoneStand(P3, W) {
-  const dev = DEVICES[P3.device] || DEVICES.phone;
-  const T = P3.deviceThick, a = clamp(P3.standAngle, 50, 80) * DEG, t = clamp(P3.standPlate, 3, 10);
-  const Wd = P3.standWidth, lipH = clamp(P3.standLip, 2, 30), L = clamp(P3.standBackHeight, 30, 200);
+function phoneStand(P4, W) {
+  const dev = DEVICES[P4.device] || DEVICES.phone;
+  const T = P4.deviceThick, a = clamp(P4.standAngle, 50, 80) * DEG, t = clamp(P4.standPlate, 3, 10);
+  const Wd = P4.standWidth, lipH = clamp(P4.standLip, 2, 30), L2 = clamp(P4.standBackHeight, 30, 200);
   const ca = Math.cos(a), sa = Math.sin(a);
   const tl = t, ub = tl + T * sa + 1;
-  const F0 = [ub, t], F1 = [ub + L * ca, t + L * sa];
+  const F0 = [ub, t], F1 = [ub + L2 * ca, t + L2 * sa];
   const nb = [sa, -ca];
   const K1 = [F1[0] + t * nb[0], F1[1] + t * nb[1]];
   const ucm = ub + dev.h / 2 * ca + 4;
-  let Bd = Math.max(P3.standBaseDepth, K1[0] + 4);
+  let Bd = Math.max(P4.standBaseDepth, K1[0] + 4);
   if (ucm > Bd) {
     Bd = ucm;
     W.push(`Base lengthened to ${Bd.toFixed(0)} mm so the device cannot tip backwards.`);
   }
-  const P0 = [0, 0], P1 = [Bd, 0], P22 = [Bd, t], S = [tl, t], Lt = [tl, t + lipH], Lf = [0, t + lipH];
-  const full = [P0, P1, P22, K1, F1, F0, S, Lt, Lf];
+  const P0 = [0, 0], P1 = [Bd, 0], P22 = [Bd, t], S2 = [tl, t], Lt = [tl, t + lipH], Lf = [0, t + lipH];
+  const full = [P0, P1, P22, K1, F1, F0, S2, Lt, Lf];
   const noLip = [P0, P1, P22, K1, F1, F0, [0, t]];
   const holes = [];
-  if (P3.brace === "truss") {
+  if (P4.brace === "truss") {
     const K0 = [F0[0] + t * nb[0], F0[1] + t * nb[1]];
     const s = (t - K0[1]) / sa, Kb = [K0[0] + s * ca, t];
-    const A = Kb, B = P22, C = K1;
-    const la = Math.hypot(B[0] - C[0], B[1] - C[1]), lb = Math.hypot(A[0] - C[0], A[1] - C[1]), lc = Math.hypot(A[0] - B[0], A[1] - B[1]);
-    const per = la + lb + lc, I = [(la * A[0] + lb * B[0] + lc * C[0]) / per, (la * A[1] + lb * B[1] + lc * C[1]) / per];
-    const area = Math.abs((B[0] - A[0]) * (C[1] - A[1]) - (C[0] - A[0]) * (B[1] - A[1])) / 2, rho = 2 * area / per;
+    const A = Kb, B = P22, C2 = K1;
+    const la = Math.hypot(B[0] - C2[0], B[1] - C2[1]), lb = Math.hypot(A[0] - C2[0], A[1] - C2[1]), lc = Math.hypot(A[0] - B[0], A[1] - B[1]);
+    const per = la + lb + lc, I2 = [(la * A[0] + lb * B[0] + lc * C2[0]) / per, (la * A[1] + lb * B[1] + lc * C2[1]) / per];
+    const area = Math.abs((B[0] - A[0]) * (C2[1] - A[1]) - (C2[0] - A[0]) * (B[1] - A[1])) / 2, rho = 2 * area / per;
     const m = t * 0.9;
     if (rho > m + 3) {
       const k = 1 - m / rho;
-      const tri = [A, B, C].map((V) => [I[0] + (V[0] - I[0]) * k, I[1] + (V[1] - I[1]) * k]);
+      const tri = [A, B, C2].map((V) => [I2[0] + (V[0] - I2[0]) * k, I2[1] + (V[1] - I2[1]) * k]);
       if (area2(tri) < 0) tri.reverse();
       holes.push(tri);
     } else W.push("Brace too small for a truss window \u2014 solid brace used.");
   }
-  const D = Bd;
-  const frame = { O: [0, 0, D / 2], U: [0, 0, -1], V: [0, 1, 0], W: [1, 0, 0] };
+  const D2 = Bd;
+  const frame = { O: [0, 0, D2 / 2], U: [0, 0, -1], V: [0, 1, 0], W: [1, 0, 0] };
   const fix = (loop2) => area2(loop2) > 0 ? loop2 : loop2.slice().reverse();
   const M = new MeshBuf();
-  const notch = clamp(P3.cableNotch, 0, Wd - 30);
+  const notch = clamp(P4.cableNotch, 0, Wd - 30);
   if (notch >= 6) {
     extrude(M, { ...frame, name: "left", loops: [fix(full), ...holes], w0: -Wd / 2, w1: -notch / 2 + 0.2 });
     extrude(M, { ...frame, name: "centre", loops: [fix(noLip), ...holes], w0: -notch / 2, w1: notch / 2 });
@@ -1281,41 +1282,41 @@ function phoneStand(P3, W) {
   } else extrude(M, { ...frame, name: "stand", loops: [fix(full), ...holes], w0: -Wd / 2, w1: Wd / 2 });
   const nf = [-sa, ca];
   const c = [F0[0] + dev.h / 2 * ca + T / 2 * nf[0], F0[1] + dev.h / 2 * sa + T / 2 * nf[1]];
-  const refs = [{ kind: "box", size: [dev.w, dev.h, T], pos: [0, c[1], D / 2 - c[0]], rot: [-(Math.PI / 2 - a), 0, 0], screen: true }];
+  const refs = [{ kind: "box", size: [dev.w, dev.h, T], pos: [0, c[1], D2 / 2 - c[0]], rot: [-(Math.PI / 2 - a), 0, 0], screen: true }];
   return { parts: [part("Stand", M, { p: [0, 0, 0] }, { r: [0, 0, Math.PI / 2] }, { printNote: "printed on its side \u2014 no supports, layer lines run along the backrest" })], refs, capacity: 0 };
 }
 var CARDS = { "business card": [90, 55], "sticky note 76": [76, 76], "index card": [127, 76], "credit card": [86, 54] };
-function cardHolder(P3, W) {
-  const [cw, ch] = P3.cardType === "custom" ? [P3.cardW, P3.cardH] : CARDS[P3.cardType] || CARDS["business card"];
-  const n = clamp(Math.round(P3.cardSlots), 1, 5), T = clamp(P3.cardStack, 3, 30), tilt = clamp(P3.cardTilt, 0, 30) * DEG;
+function cardHolder(P4, W) {
+  const [cw, ch] = P4.cardType === "custom" ? [P4.cardW, P4.cardH] : CARDS[P4.cardType] || CARDS["business card"];
+  const n = clamp(Math.round(P4.cardSlots), 1, 5), T = clamp(P4.cardStack, 3, 30), tilt = clamp(P4.cardTilt, 0, 30) * DEG;
   const wall = 3, side = 3.2, floor = 2.4, clr = 1;
-  const H = Math.max(16, P3.cardHeightFrac * ch);
+  const H = Math.max(16, P4.cardHeightFrac * ch);
   const s = Math.tan(tilt) * (H - floor);
-  const trough = P3.cardTrough ? 16 : 0;
+  const trough = P4.cardTrough ? 16 : 0;
   const Wd = cw + clr + 2 * side;
-  const D = wall + (trough ? trough + wall : 0) + n * T + (n - 1) * wall + s + wall;
-  let rc = clamp(P3.cardCorner, 0.5, 12);
-  const rcMax = maxCornerFor(Math.min(side, wall) - clamp(P3.topChamfer, 0, 1.2) - 0.5, 0.8);
+  const D2 = wall + (trough ? trough + wall : 0) + n * T + (n - 1) * wall + s + wall;
+  let rc = clamp(P4.cardCorner, 0.5, 12);
+  const rcMax = maxCornerFor(Math.min(side, wall) - clamp(P4.topChamfer, 0, 1.2) - 0.5, 0.8);
   if (rc > rcMax) {
     rc = rcMax;
     W.push(`Corner radius limited to ${rc.toFixed(1)} mm so the slots keep their walls.`);
   }
-  const segs = clamp(Math.round(P3.curveSegs / 8), 3, 16);
-  const cb = clamp(P3.bottomChamfer, 0, 2);
-  const dip = clamp(P3.fingerDip, 0, H - floor - 8);
+  const segs = clamp(Math.round(P4.curveSegs / 8), 3, 16);
+  const cb = clamp(P4.bottomChamfer, 0, 2);
+  const dip = clamp(P4.fingerDip, 0, H - floor - 8);
   let topFn = null;
-  const zFirstBack = D / 2 - wall - (trough ? trough + wall : 0) - T - s;
+  const zFirstBack = D2 / 2 - wall - (trough ? trough + wall : 0) - T - s;
   if (dip > 0.5) {
     const half = Math.min(cw * 0.32, 26);
-    topFn = (x, z) => H - dip * smooth(1 - Math.abs(x) / half) * smooth((z - zFirstBack + 2) / (D / 2 - zFirstBack + 2));
+    topFn = (x, z) => H - dip * smooth(1 - Math.abs(x) / half) * smooth((z - zFirstBack + 2) / (D2 / 2 - zFirstBack + 2));
   }
-  const tc = topFn ? 0 : clamp(P3.topChamfer, 0, 1.2);
+  const tc = topFn ? 0 : clamp(P4.topChamfer, 0, 1.2);
   const yS = topFn ? H - dip - 1 : H;
-  const body = rrect(0, 0, Wd, D, rc, segs);
+  const body = rrect(0, 0, Wd, D2, rc, segs);
   const outer = { n: body.n, at: (i, y) => body.pt(i, chamB(y, 0, cb) + chamT(y, H, tc)) };
   const pockets = [];
   let cap = 0;
-  let zf = D / 2 - wall;
+  let zf = D2 / 2 - wall;
   if (trough) {
     const ps = rrect(0, zf - trough / 2, cw + clr, trough, 3, segs), pf = Math.max(floor, H * 0.35), rs = Math.min(7, trough / 2 - 0.6);
     const pk = { n: ps.n, floor: pf, tag: 1, at: (i, y) => ps.pt(i, scoopIns(y, pf, rs) + (topFn ? 0 : lipIns(y, H, 0.6))) };
@@ -1341,13 +1342,13 @@ function cardHolder(P3, W) {
   prism(M, { name: "holder", y0: 0, levels: lv(0, yS, [cb, floor, H - tc, ...pockets.map((p) => p.floor)], 4), top: topFn, band: 6, outer, pockets });
   return { parts: [part("Card holder", M, { p: [0, 0, 0] }, { r: [0, 0, 0] })], refs: pockets.filter((p) => p.ref).map((p) => p.ref), capacity: cap / 1e3 };
 }
-function cableOrganizer(P3, W) {
-  const n = clamp(Math.round(P3.cableChannels), 1, 10), d = clamp(P3.cableDia, 2, 14), Lz = clamp(P3.cableLength, 12, 120);
-  const rc = d / 2 + 0.3, neck = clamp(P3.cableNeck * d, 1, 2 * rc - 0.6), gap = clamp(P3.cablePitch, 2.5, 30);
-  const base = clamp(P3.cableBase, 2.4, 30), neckLen = Math.max(1.8, rc * 0.45), side = Math.max(4, gap);
+function cableOrganizer(P4, W) {
+  const n = clamp(Math.round(P4.cableChannels), 1, 10), d = clamp(P4.cableDia, 2, 14), Lz = clamp(P4.cableLength, 12, 120);
+  const rc = d / 2 + 0.3, neck = clamp(P4.cableNeck * d, 1, 2 * rc - 0.6), gap = clamp(P4.cablePitch, 2.5, 30);
+  const base = clamp(P4.cableBase, 2.4, 30), neckLen = Math.max(1.8, rc * 0.45), side = Math.max(4, gap);
   const Hc = base + 2 * rc + neckLen, Wc = n * 2 * rc + (n - 1) * gap + 2 * side;
-  const cr = clamp(P3.cableRound, 0, Math.min(side - 1, Hc / 2 - 1)), lead = Math.min(neckLen - 0.5, 1.2);
-  const vc = Hc - neckLen - rc, segs = clamp(Math.round(P3.curveSegs / 2), 12, 64);
+  const cr = clamp(P4.cableRound, 0, Math.min(side - 1, Hc / 2 - 1)), lead = Math.min(neckLen - 0.5, 1.2);
+  const vc = Hc - neckLen - rc, segs = clamp(Math.round(P4.curveSegs / 2), 12, 64);
   const pts = [[-Wc / 2, 0], [Wc / 2, 0]];
   const arc = (cx, cy, r, a0, a1, m) => {
     for (let i = 0; i <= m; i++) {
@@ -1378,14 +1379,14 @@ function cableOrganizer(P3, W) {
   for (let k = 0; k < n; k++) refs.push({ kind: "cyl", r: d / 2, h: Lz + 70, pos: [-Wc / 2 + side + rc + k * (2 * rc + gap), vc, 0], rot: [Math.PI / 2, 0, 0], cable: true });
   return { parts: [part("Cable dock", M, { p: [0, 0, 0] }, { r: [-Math.PI / 2, 0, 0] }, { printNote: "printed on its back \u2014 channels stand vertical, no overhangs" })], refs, capacity: 0 };
 }
-function miniDrawer(P3, W) {
-  const n = clamp(Math.round(P3.drawerCount), 1, 5);
-  const iw = P3.drawerW, id = P3.drawerD, ih = P3.drawerH, dw = clamp(P3.drawerWall, 1.2, 4), cw = clamp(P3.caseWall, 1.6, 6), clr = clamp(P3.drawerClear, 0.15, 1);
+function miniDrawer(P4, W) {
+  const n = clamp(Math.round(P4.drawerCount), 1, 5);
+  const iw = P4.drawerW, id = P4.drawerD, ih = P4.drawerH, dw = clamp(P4.drawerWall, 1.2, 4), cw = clamp(P4.caseWall, 1.6, 6), clr = clamp(P4.drawerClear, 0.15, 1);
   const ow = iw + 2 * dw, od = id + 2 * dw, oh = ih + dw;
   const bw = ow + 2 * clr, bh = oh + 2 * clr;
   const Wc = bw + 2 * cw, Hc = n * bh + (n + 1) * cw, Dc = od + clr + cw;
-  const segs = clamp(Math.round(P3.curveSegs / 8), 3, 16);
-  let rcase = clamp(P3.caseCorner, 0.5, Math.min(Wc, Hc) * 0.3);
+  const segs = clamp(Math.round(P4.curveSegs / 8), 3, 16);
+  let rcase = clamp(P4.caseCorner, 0.5, Math.min(Wc, Hc) * 0.3);
   if (rcase > maxCornerFor(cw, 0.6)) {
     rcase = maxCornerFor(cw, 0.6);
     W.push(`Case corner radius limited to ${rcase.toFixed(1)} mm by the wall thickness.`);
@@ -1399,14 +1400,14 @@ function miniDrawer(P3, W) {
   const outerL = rr2d(0, Hc / 2, Wc, Hc, rcase, segs);
   const bays = [];
   for (let k = 0; k < n; k++) bays.push(rr2d(0, cw + k * (bh + cw) + bh / 2, bw, bh, 0.6, 2));
-  const C = new MeshBuf();
-  extrude(C, { name: "case", O: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], loops: [outerL, ...bays], w0: -Dc / 2 + cw - 0.2, w1: Dc / 2 });
-  extrude(C, { name: "back", O: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], loops: [outerL], w0: -Dc / 2, w1: -Dc / 2 + cw });
-  const parts = [part("Case", C, { p: [0, 0, 0] }, { r: [-Math.PI / 2, 0, 0] }, { printNote: "printed standing on its back panel \u2014 bays are vertical, no supports" })];
-  const cb = clamp(P3.bottomChamfer, 0, 1.2);
+  const C2 = new MeshBuf();
+  extrude(C2, { name: "case", O: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], loops: [outerL, ...bays], w0: -Dc / 2 + cw - 0.2, w1: Dc / 2 });
+  extrude(C2, { name: "back", O: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], loops: [outerL], w0: -Dc / 2, w1: -Dc / 2 + cw });
+  const parts = [part("Case", C2, { p: [0, 0, 0] }, { r: [-Math.PI / 2, 0, 0] }, { printNote: "printed standing on its back panel \u2014 bays are vertical, no supports" })];
+  const cb = clamp(P4.bottomChamfer, 0, 1.2);
   const body = rrect(0, 0, ow, od, 1.2, segs);
   let topFn = null;
-  const dip = P3.drawerHandle === "dip" ? Math.min(oh * 0.45, 14) : 0;
+  const dip = P4.drawerHandle === "dip" ? Math.min(oh * 0.45, 14) : 0;
   if (dip) {
     const half = Math.min(ow * 0.25, 18);
     topFn = (x, z) => oh - dip * smooth(1 - Math.abs(x) / half) * smooth((z - od / 2 + dw + 6) / (dw + 6));
@@ -1417,25 +1418,25 @@ function miniDrawer(P3, W) {
   const pk = { n: ps.n, floor: dw, tag: 1, at: (i, y) => ps.pt(i, scoopIns(y, dw, rs)) };
   pk.levels = lv(dw, yS, scoopBreaks(dw, rs), 50);
   checkPrism(outer, [pk], [dw + 0.2, yS - 0.05], W, "Drawer");
-  const D = new MeshBuf();
-  prism(D, { name: "drawer", y0: 0, levels: lv(0, yS, [cb, dw, ...scoopBreaks(dw, rs)], 50), top: topFn, band: 6, outer, pockets: [pk] });
-  if (P3.drawerHandle === "tab") {
+  const D2 = new MeshBuf();
+  prism(D2, { name: "drawer", y0: 0, levels: lv(0, yS, [cb, dw, ...scoopBreaks(dw, rs)], 50), top: topFn, band: 6, outer, pockets: [pk] });
+  if (P4.drawerHandle === "tab") {
     const tw = Math.min(ow * 0.4, 30), tD = 7, yb = oh * 0.35, yt = Math.min(oh - 1, yb + tD + 4);
-    extrude(D, { name: "tab", O: [0, 0, od / 2], U: [0, 0, 1], V: [0, 1, 0], W: [1, 0, 0], loops: [[[-0.4, yb - 0.4], [tD, yb + tD], [tD, yt], [-0.4, yt]].reverse()], w0: -tw / 2, w1: tw / 2 });
+    extrude(D2, { name: "tab", O: [0, 0, od / 2], U: [0, 0, 1], V: [0, 1, 0], W: [1, 0, 0], loops: [[[-0.4, yb - 0.4], [tD, yb + tD], [tD, yt], [-0.4, yt]].reverse()], w0: -tw / 2, w1: tw / 2 });
   }
   for (let k = 0; k < n; k++) {
     const y = cw + k * (bh + cw);
-    parts.push(part(`Drawer ${k + 1}`, k ? D : D, { p: [0, y, Dc / 2 - od / 2], drawer: true, depth: od }, { r: [0, 0, 0] }, { shared: k > 0 }));
+    parts.push(part(`Drawer ${k + 1}`, k ? D2 : D2, { p: [0, y, Dc / 2 - od / 2], drawer: true, depth: od }, { r: [0, 0, 0] }, { shared: k > 0 }));
   }
   return { parts, refs: [], capacity: n * iw * id * ih / 1e3 };
 }
 var RECIPES = { "pen-cup": penCup, tray: tray2, "pen-block": penBlock, "phone-stand": phoneStand, "card-holder": cardHolder, "cable-organizer": cableOrganizer, "mini-drawer": miniDrawer };
-function buildObject(P3) {
+function buildObject(P4) {
   const t0 = (typeof performance !== "undefined" ? performance : Date).now();
   const warnings = [];
-  const fn = RECIPES[P3.objectType] || tray2;
-  const res = fn(P3, warnings);
-  const dens = DENSITY[P3.filament] || 1.24;
+  const fn = RECIPES[P4.objectType] || tray2;
+  const res = fn(P4, warnings);
+  const dens = DENSITY[P4.filament] || 1.24;
   const uniq = res.parts.filter((p) => !p.shared);
   const volume = res.parts.reduce((a, p) => a + p.volume, 0);
   const ok = uniq.every((p) => p.manifold.ok);
@@ -1449,15 +1450,302 @@ function buildObject(P3) {
 function printMinutes(volume, parts) {
   let h = 0;
   for (const p of parts) {
-    const P3 = p.mesh.pos;
+    const P4 = p.mesh.pos;
     let mn = Infinity, mx = -Infinity;
-    for (let i = 1; i < P3.length; i += 3) {
-      mn = Math.min(mn, P3[i]);
-      mx = Math.max(mx, P3[i]);
+    for (let i = 1; i < P4.length; i += 3) {
+      mn = Math.min(mn, P4[i]);
+      mx = Math.max(mx, P4[i]);
     }
     h = Math.max(h, mx - mn);
   }
   return volume / 9 / 60 + h / 0.2 * 2.5 / 60;
+}
+
+// src/fbx.js
+import { zlibSync } from "three/addons/libs/fflate.module.js";
+var enc = new TextEncoder();
+var HEAD = [...enc.encode("Kaydara FBX Binary  "), 0, 26, 0];
+var FOOT_ID = [250, 188, 171, 9, 208, 200, 212, 102, 177, 118, 251, 131, 28, 247, 38, 126];
+var FOOT_MAGIC = [248, 90, 140, 106, 222, 245, 217, 126, 236, 233, 12, 227, 117, 143, 41, 11];
+var VERSION = 7400;
+var Out = class {
+  constructor() {
+    this.buf = new Uint8Array(1 << 16);
+    this.dv = new DataView(this.buf.buffer);
+    this.n = 0;
+  }
+  need(k) {
+    if (this.n + k <= this.buf.length) return;
+    let c = this.buf.length;
+    while (c < this.n + k) c *= 2;
+    const b = new Uint8Array(c);
+    b.set(this.buf.subarray(0, this.n));
+    this.buf = b;
+    this.dv = new DataView(b.buffer);
+  }
+  u8(v) {
+    this.need(1);
+    this.buf[this.n++] = v;
+  }
+  bytes(a) {
+    this.need(a.length);
+    this.buf.set(a, this.n);
+    this.n += a.length;
+  }
+  u32(v) {
+    this.need(4);
+    this.dv.setUint32(this.n, v, true);
+    this.n += 4;
+  }
+  i32(v) {
+    this.need(4);
+    this.dv.setInt32(this.n, v, true);
+    this.n += 4;
+  }
+  i16(v) {
+    this.need(2);
+    this.dv.setInt16(this.n, v, true);
+    this.n += 2;
+  }
+  i64(v) {
+    this.need(8);
+    this.dv.setBigInt64(this.n, BigInt(v), true);
+    this.n += 8;
+  }
+  f64(v) {
+    this.need(8);
+    this.dv.setFloat64(this.n, v, true);
+    this.n += 8;
+  }
+  setU32(at, v) {
+    this.dv.setUint32(at, v, true);
+  }
+  result() {
+    return this.buf.slice(0, this.n);
+  }
+};
+var I = (v) => ({ t: "I", v });
+var L = (v) => ({ t: "L", v });
+var D = (v) => ({ t: "D", v });
+var C = (v) => ({ t: "C", v });
+var S = (v) => ({ t: "S", v });
+var R = (v) => ({ t: "R", v });
+var AD = (v) => ({ t: "d", v });
+var AI = (v) => ({ t: "i", v });
+var N = (name, props = [], children = []) => ({ name, props, children });
+var objName = (name, cls) => S(`${name}\0${cls}`);
+var P2 = (name, type, label, flags, ...vals) => N("P", [S(name), S(type), S(label), S(flags), ...vals]);
+function writeProp(o, p) {
+  switch (p.t) {
+    case "Y":
+      o.u8(89);
+      o.i16(p.v);
+      break;
+    case "C":
+      o.u8(67);
+      o.u8(p.v ? 1 : 0);
+      break;
+    case "I":
+      o.u8(73);
+      o.i32(p.v);
+      break;
+    case "L":
+      o.u8(76);
+      o.i64(p.v);
+      break;
+    case "D":
+      o.u8(68);
+      o.f64(p.v);
+      break;
+    case "S": {
+      const b = enc.encode(p.v);
+      o.u8(83);
+      o.u32(b.length);
+      o.bytes(b);
+      break;
+    }
+    case "R":
+      o.u8(82);
+      o.u32(p.v.length);
+      o.bytes(p.v);
+      break;
+    case "d":
+    case "i": {
+      const isD = p.t === "d", n = p.v.length;
+      const raw = new Uint8Array(n * (isD ? 8 : 4)), dv = new DataView(raw.buffer);
+      for (let k = 0; k < n; k++) isD ? dv.setFloat64(8 * k, p.v[k], true) : dv.setInt32(4 * k, p.v[k], true);
+      const z = raw.length > 256 ? zlibSync(raw, { level: 6 }) : null;
+      o.u8(isD ? 100 : 105);
+      o.u32(n);
+      o.u32(z ? 1 : 0);
+      o.u32(z ? z.length : raw.length);
+      o.bytes(z || raw);
+      break;
+    }
+    default:
+      throw new Error("fbx: unknown property type " + p.t);
+  }
+}
+function writeNode(o, node) {
+  const start = o.n;
+  o.u32(0);
+  o.u32(node.props.length);
+  o.u32(0);
+  const name = enc.encode(node.name);
+  o.u8(name.length);
+  o.bytes(name);
+  const p0 = o.n;
+  for (const p of node.props) writeProp(o, p);
+  o.setU32(start + 8, o.n - p0);
+  if (node.children.length) {
+    for (const c of node.children) writeNode(o, c);
+    o.bytes(new Uint8Array(13));
+  } else if (!node.props.length) o.bytes(new Uint8Array(13));
+  o.setU32(start, o.n);
+}
+function writeFBX(parts, materials, { creator = "DeskKit Studio 3D", date = /* @__PURE__ */ new Date() } = {}) {
+  let id = 1e6;
+  const nid = () => ++id;
+  const objects = [], conns = [];
+  const matIds = materials.map(() => nid());
+  materials.forEach((m, k) => {
+    const [r, g, b] = m.color;
+    objects.push(N("Material", [L(matIds[k]), objName(m.name, "Material"), S("")], [
+      N("Version", [I(102)]),
+      N("ShadingModel", [S("phong")]),
+      N("MultiLayer", [I(0)]),
+      N("Properties70", [], [
+        P2("DiffuseColor", "Color", "", "A", D(r), D(g), D(b)),
+        P2("DiffuseFactor", "Number", "", "A", D(1)),
+        P2("SpecularColor", "Color", "", "A", D(0.2), D(0.2), D(0.2)),
+        P2("Shininess", "Number", "", "A", D(12)),
+        P2("Opacity", "double", "Number", "", D(1))
+      ])
+    ]));
+  });
+  for (const part2 of parts) {
+    const gid = nid(), mid = nid();
+    const nt = part2.idx.length / 3;
+    const pvi = new Int32Array(part2.idx.length);
+    for (let t = 0; t < nt; t++) {
+      pvi[3 * t] = part2.idx[3 * t];
+      pvi[3 * t + 1] = part2.idx[3 * t + 1];
+      pvi[3 * t + 2] = -part2.idx[3 * t + 2] - 1;
+    }
+    const used = [...new Set(part2.triMat)].sort((a, b) => a - b);
+    const local = new Map(used.map((m, k) => [m, k]));
+    const mats = new Int32Array(nt);
+    for (let t = 0; t < nt; t++) mats[t] = local.get(part2.triMat[t]);
+    const layers = [];
+    const geomChildren = [
+      N("Vertices", [AD(part2.pos)]),
+      N("PolygonVertexIndex", [AI(pvi)]),
+      N("GeometryVersion", [I(124)])
+    ];
+    if (part2.normals) {
+      geomChildren.push(N("LayerElementNormal", [I(0)], [
+        N("Version", [I(101)]),
+        N("Name", [S("")]),
+        N("MappingInformationType", [S("ByPolygonVertex")]),
+        N("ReferenceInformationType", [S("Direct")]),
+        N("Normals", [AD(part2.normals)])
+      ]));
+      layers.push("LayerElementNormal");
+    }
+    if (part2.colors) {
+      const nc = part2.colors.length / 3, rgba = new Float64Array(nc * 4);
+      for (let k = 0; k < nc; k++) {
+        rgba[4 * k] = part2.colors[3 * k];
+        rgba[4 * k + 1] = part2.colors[3 * k + 1];
+        rgba[4 * k + 2] = part2.colors[3 * k + 2];
+        rgba[4 * k + 3] = 1;
+      }
+      const ci = new Int32Array(nc);
+      for (let k = 0; k < nc; k++) ci[k] = k;
+      geomChildren.push(N("LayerElementColor", [I(0)], [
+        N("Version", [I(101)]),
+        N("Name", [S("Col")]),
+        N("MappingInformationType", [S("ByPolygonVertex")]),
+        N("ReferenceInformationType", [S("IndexToDirect")]),
+        N("Colors", [AD(rgba)]),
+        N("ColorIndex", [AI(ci)])
+      ]));
+      layers.push("LayerElementColor");
+    }
+    geomChildren.push(N("LayerElementMaterial", [I(0)], [
+      N("Version", [I(101)]),
+      N("Name", [S("")]),
+      N("MappingInformationType", [S(used.length > 1 ? "ByPolygon" : "AllSame")]),
+      N("ReferenceInformationType", [S("IndexToDirect")]),
+      N("Materials", [AI(used.length > 1 ? mats : new Int32Array([0]))])
+    ]));
+    layers.push("LayerElementMaterial");
+    geomChildren.push(N("Layer", [I(0)], [N("Version", [I(100)]), ...layers.map((t) => N("LayerElement", [], [N("Type", [S(t)]), N("TypedIndex", [I(0)])]))]));
+    objects.push(N("Geometry", [L(gid), objName(part2.name, "Geometry"), S("Mesh")], geomChildren));
+    objects.push(N("Model", [L(mid), objName(part2.name, "Model"), S("Mesh")], [
+      N("Version", [I(232)]),
+      N("Properties70", [], [P2("DefaultAttributeIndex", "int", "Integer", "", I(0)), P2("InheritType", "enum", "", "", I(1))]),
+      N("Shading", [C(true)]),
+      N("Culling", [S("CullingOff")])
+    ]));
+    conns.push(N("C", [S("OO"), L(mid), L(0)]), N("C", [S("OO"), L(gid), L(mid)]));
+    for (const m of used) conns.push(N("C", [S("OO"), L(matIds[m]), L(mid)]));
+  }
+  const pad = (v) => String(v).padStart(2, "0");
+  const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}:000`;
+  const root = [
+    N("FBXHeaderExtension", [], [
+      N("FBXHeaderVersion", [I(1003)]),
+      N("FBXVersion", [I(VERSION)]),
+      N("EncryptionType", [I(0)]),
+      N("CreationTimeStamp", [], [N("Version", [I(1e3)]), N("Year", [I(date.getFullYear())]), N("Month", [I(date.getMonth() + 1)]), N("Day", [I(date.getDate())]), N("Hour", [I(date.getHours())]), N("Minute", [I(date.getMinutes())]), N("Second", [I(date.getSeconds())]), N("Millisecond", [I(0)])]),
+      N("Creator", [S(creator)])
+    ]),
+    N("FileId", [R(new Uint8Array([40, 179, 42, 235, 182, 36, 204, 194, 191, 200, 176, 42, 169, 43, 252, 241]))]),
+    N("CreationTime", [S(stamp)]),
+    N("Creator", [S(creator)]),
+    N("GlobalSettings", [], [
+      N("Version", [I(1e3)]),
+      N("Properties70", [], [
+        P2("UpAxis", "int", "Integer", "", I(1)),
+        P2("UpAxisSign", "int", "Integer", "", I(1)),
+        P2("FrontAxis", "int", "Integer", "", I(2)),
+        P2("FrontAxisSign", "int", "Integer", "", I(1)),
+        P2("CoordAxis", "int", "Integer", "", I(0)),
+        P2("CoordAxisSign", "int", "Integer", "", I(1)),
+        P2("OriginalUpAxis", "int", "Integer", "", I(1)),
+        P2("OriginalUpAxisSign", "int", "Integer", "", I(1)),
+        P2("UnitScaleFactor", "double", "Number", "", D(0.1)),
+        P2("OriginalUnitScaleFactor", "double", "Number", "", D(0.1))
+      ])
+    ]),
+    N("Documents", [], [N("Count", [I(1)]), N("Document", [L(nid()), S("Scene"), S("Scene")], [N("Properties70", []), N("RootNode", [L(0)])])]),
+    N("References", []),
+    N("Definitions", [], [
+      N("Version", [I(100)]),
+      N("Count", [I(1 + 2 * parts.length + materials.length)]),
+      N("ObjectType", [S("GlobalSettings")], [N("Count", [I(1)])]),
+      N("ObjectType", [S("Model")], [N("Count", [I(parts.length)])]),
+      N("ObjectType", [S("Geometry")], [N("Count", [I(parts.length)])]),
+      N("ObjectType", [S("Material")], [N("Count", [I(materials.length)])])
+    ]),
+    N("Objects", [], objects),
+    N("Connections", [], conns)
+  ];
+  const o = new Out();
+  o.bytes(HEAD);
+  o.u32(VERSION);
+  for (const n of root) writeNode(o, n);
+  o.bytes(new Uint8Array(13));
+  o.bytes(FOOT_ID);
+  o.bytes(new Uint8Array(4));
+  let padN = (o.n + 15 & ~15) - o.n;
+  if (padN === 0) padN = 16;
+  o.bytes(new Uint8Array(padN));
+  o.u32(VERSION);
+  o.bytes(new Uint8Array(120));
+  o.bytes(FOOT_MAGIC);
+  return o.result();
 }
 
 // src/app.js
@@ -1465,7 +1753,7 @@ var $ = (s) => document.querySelector(s);
 var $$ = (s) => [...document.querySelectorAll(s)];
 var PARAMS = SCHEMA.flatMap((g) => g.params.map((p) => ({ ...p, group: g })));
 var PBY = Object.fromEntries(PARAMS.map((p) => [p.key, p]));
-var P2 = { ...PRESETS["Stepped Pen Block"] };
+var P3 = { ...PRESETS["Stepped Pen Block"] };
 var view = { cut: "off", cutPos: 50, theme: "dark" };
 try {
   const t = localStorage.getItem("dk-theme");
@@ -1538,14 +1826,14 @@ function creased(m, crease = 30 * Math.PI / 180) {
   for (let i = 0; i < nv; i++) cnt[i + 1] += cnt[i];
   const fillp = cnt.slice(0, nv), adj = new Uint32Array(idx.length);
   for (let i = 0; i < idx.length; i++) adj[fillp[idx[i]]++] = i / 3 | 0;
-  const cosC = Math.cos(crease), P3 = new Float32Array(nt * 9), N3 = new Float32Array(nt * 9);
+  const cosC = Math.cos(crease), P32 = new Float32Array(nt * 9), N3 = new Float32Array(nt * 9);
   for (let t = 0; t < nt; t++) {
     const fx = fn[3 * t], fy = fn[3 * t + 1], fz = fn[3 * t + 2], fl = Math.hypot(fx, fy, fz) || 1;
     for (let k = 0; k < 3; k++) {
       const v = idx[3 * t + k], o = 9 * t + 3 * k;
-      P3[o] = pos[3 * v];
-      P3[o + 1] = pos[3 * v + 1];
-      P3[o + 2] = pos[3 * v + 2];
+      P32[o] = pos[3 * v];
+      P32[o + 1] = pos[3 * v + 1];
+      P32[o + 2] = pos[3 * v + 2];
       let sx = 0, sy = 0, sz = 0;
       for (let q = cnt[v]; q < cnt[v + 1]; q++) {
         const g2 = adj[q], gx = fn[3 * g2], gy = fn[3 * g2 + 1], gz = fn[3 * g2 + 2], gl = Math.hypot(gx, gy, gz) || 1;
@@ -1562,7 +1850,7 @@ function creased(m, crease = 30 * Math.PI / 180) {
     }
   }
   const g = new THREE2.BufferGeometry();
-  g.setAttribute("position", new THREE2.BufferAttribute(P3, 3));
+  g.setAttribute("position", new THREE2.BufferAttribute(P32, 3));
   g.setAttribute("normal", new THREE2.BufferAttribute(N3, 3));
   g.setAttribute("color", new THREE2.BufferAttribute(new Float32Array(nt * 9), 3));
   g.userData.tags = Uint8Array.from(m.tag);
@@ -1571,8 +1859,8 @@ function creased(m, crease = 30 * Math.PI / 180) {
   return g;
 }
 var tagColors = () => {
-  const b = new THREE2.Color(P2.colorBody);
-  return [b, P2.twoTone ? new THREE2.Color(P2.colorAccent) : b];
+  const b = new THREE2.Color(P3.colorBody);
+  return [b, P3.twoTone ? new THREE2.Color(P3.colorAccent) : b];
 };
 function paint(g) {
   const cols = tagColors(), tags = g.userData.tags, col = g.attributes.color.array;
@@ -1591,7 +1879,7 @@ var model = null;
 var items = [];
 var geoCache = /* @__PURE__ */ new Map();
 function rebuild(preview = false) {
-  const Q = preview ? { ...P2, curveSegs: Math.min(P2.curveSegs, 40), heightSegs: Math.min(P2.heightSegs, 30) } : P2;
+  const Q = preview ? { ...P3, curveSegs: Math.min(P3.curveSegs, 40), heightSegs: Math.min(P3.heightSegs, 30) } : P3;
   model = buildObject(Q);
   for (const g of geoCache.values()) g.dispose();
   geoCache.clear();
@@ -1606,7 +1894,7 @@ function rebuild(preview = false) {
     const mesh = new THREE2.Mesh(geo, matPart);
     mesh.castShadow = mesh.receiveShadow = true;
     const wire = new THREE2.Mesh(geo, matWire);
-    wire.visible = !!P2.wireframe;
+    wire.visible = !!P3.wireframe;
     world.add(mesh, wire);
     return { part: part2, geo, mesh, wire };
   });
@@ -1620,35 +1908,35 @@ function computePlate() {
   const gap = 10;
   const boxes = items.map((it) => {
     const r = it.part.print.r || [0, 0, 0];
-    const R = new THREE2.Matrix4().makeRotationFromEuler(new THREE2.Euler(r[0], r[1], r[2]));
-    const b = it.geo.boundingBox.clone().applyMatrix4(R);
-    return { R, b };
+    const R2 = new THREE2.Matrix4().makeRotationFromEuler(new THREE2.Euler(r[0], r[1], r[2]));
+    const b = it.geo.boundingBox.clone().applyMatrix4(R2);
+    return { R: R2, b };
   });
   const total = boxes.reduce((a, o) => a + (o.b.max.x - o.b.min.x), 0) + gap * (boxes.length - 1);
   x = -total / 2;
   items.forEach((it, i) => {
-    const { R, b } = boxes[i];
+    const { R: R2, b } = boxes[i];
     const T = new THREE2.Matrix4().makeTranslation(x - b.min.x, -b.min.y, -(b.min.z + b.max.z) / 2);
-    it.plateM = T.multiply(R);
+    it.plateM = T.multiply(R2);
     x += b.max.x - b.min.x + gap;
   });
 }
 function asmMatrix(it) {
   const a = it.part.asm, p = a.p || [0, 0, 0];
-  const dz = a.drawer ? P2.drawerOpen / 100 * a.depth * 0.72 : 0;
+  const dz = a.drawer ? P3.drawerOpen / 100 * a.depth * 0.72 : 0;
   return new THREE2.Matrix4().compose(new THREE2.Vector3(p[0], p[1], p[2] + dz), new THREE2.Quaternion(), new THREE2.Vector3(1, 1, 1));
 }
 function place() {
   for (const it of items) {
-    const M = P2.viewMode === "plate" ? it.plateM : asmMatrix(it);
+    const M = P3.viewMode === "plate" ? it.plateM : asmMatrix(it);
     for (const m of [it.mesh, it.wire]) {
       m.matrixAutoUpdate = false;
       m.matrix.copy(M);
       m.matrixWorldNeedsUpdate = true;
     }
   }
-  refGroup.visible = P2.viewMode !== "plate" && !!P2.showRefs;
-  $("#openBar").hidden = !(P2.objectType === "mini-drawer" && P2.viewMode !== "plate");
+  refGroup.visible = P3.viewMode !== "plate" && !!P3.showRefs;
+  $("#openBar").hidden = !(P3.objectType === "mini-drawer" && P3.viewMode !== "plate");
   updatePlateMesh();
   updateCut();
   if (model) updateHUD();
@@ -1693,7 +1981,7 @@ function updatePlateMesh() {
   const dark = view.theme === "dark";
   grid = new THREE2.GridHelper(span, span / 10, dark ? 4870476 : 11844787, dark ? 2501159 : 14015443);
   grid.position.set(Math.round(c.x / 10) * 10, 0, Math.round(c.z / 10) * 10);
-  grid.visible = !!P2.showGrid;
+  grid.visible = !!P3.showGrid;
   scene.add(grid);
   const r = Math.max(size.x, size.y, size.z) * 1.3 + 60;
   Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: 2500 });
@@ -1702,20 +1990,20 @@ function updatePlateMesh() {
   sun.target.position.copy(c);
 }
 function updateMaterials() {
-  matPart.roughness = P2.roughness;
+  matPart.roughness = P3.roughness;
   matPart.metalness = 0.02;
-  matPart.sheen = P2.sheen;
+  matPart.sheen = P3.sheen;
   matPart.sheenRoughness = 0.5;
   matPart.sheenColor = new THREE2.Color(16777215);
-  if (matPart.flatShading !== !!P2.flatShading) {
-    matPart.flatShading = !!P2.flatShading;
+  if (matPart.flatShading !== !!P3.flatShading) {
+    matPart.flatShading = !!P3.flatShading;
     matPart.needsUpdate = true;
   }
   for (const g of geoCache.values()) paint(g);
-  for (const it of items) it.wire.visible = !!P2.wireframe;
-  if (grid) grid.visible = !!P2.showGrid;
-  controls.autoRotate = !!P2.autoRotate;
-  const c = new THREE2.Color(P2.colorBody).multiplyScalar(0.45);
+  for (const it of items) it.wire.visible = !!P3.wireframe;
+  if (grid) grid.visible = !!P3.showGrid;
+  controls.autoRotate = !!P3.autoRotate;
+  const c = new THREE2.Color(P3.colorBody).multiplyScalar(0.45);
   matPart.userData.cap.value.copy(c).convertLinearToSRGB();
   place();
   syncToggles();
@@ -1752,14 +2040,14 @@ var fmt = (v, d = 1) => isFinite(v) ? v.toFixed(d) : "\u2014";
 var hudMin = false;
 function updateHUD() {
   if (!model) return;
-  const s = model.stats, dens = DENSITY[P2.filament] || 1.24;
-  const pv = printedVolume(model.parts, P2.infill);
+  const s = model.stats, dens = DENSITY[P3.filament] || 1.24;
+  const pv = printedVolume(model.parts, P3.infill);
   const box = new THREE2.Box3();
   for (const it of items) box.union(it.geo.boundingBox.clone().applyMatrix4(asmMatrixStatic(it)));
   const sz = box.getSize(new THREE2.Vector3());
   const mins = pv / 9 / 60 + sz.y / 0.2 * 2 / 60;
   const tm = mins >= 60 ? `${Math.floor(mins / 60)} h ${String(Math.round(mins % 60)).padStart(2, "0")} min` : `${Math.round(mins)} min`;
-  const typeName = (OBJECT_TYPES.find((t) => t[0] === P2.objectType) || [])[1];
+  const typeName = (OBJECT_TYPES.find((t) => t[0] === P3.objectType) || [])[1];
   const uniq = model.parts.length;
   const notes = [...new Set(model.parts.map((p) => p.printNote).filter(Boolean))];
   const html = `<h3><span>${typeName}</span><button id="hudMin" aria-label="Collapse">${hudMin ? "+" : "\u2013"}</button></h3>
@@ -1781,7 +2069,7 @@ function updateHUD() {
     hudMin = !hudMin;
     updateHUD();
   };
-  $("#legend").innerHTML = `<span><i style="background:${P2.colorBody}"></i>body</span>${P2.twoTone ? `<span><i style="background:${P2.colorAccent}"></i>interior</span>` : ""}${P2.showRefs && model.refs.length && P2.viewMode !== "plate" ? '<span><i style="background:#b9c3cf"></i>fit reference</span>' : ""}<span>${P2.filament} \xB7 ${P2.infill}% infill</span>`;
+  $("#legend").innerHTML = `<span><i style="background:${P3.colorBody}"></i>body</span>${P3.twoTone ? `<span><i style="background:${P3.colorAccent}"></i>interior</span>` : ""}${P3.showRefs && model.refs.length && P3.viewMode !== "plate" ? '<span><i style="background:#b9c3cf"></i>fit reference</span>' : ""}<span>${P3.filament} \xB7 ${P3.infill}% infill</span>`;
 }
 function asmMatrixStatic(it) {
   const p = it.part.asm.p || [0, 0, 0];
@@ -1802,8 +2090,8 @@ function buildUI() {
   for (const b of $$("[data-type]")) b.onclick = () => {
     const k = b.dataset.type;
     const pre = Object.entries(PRESETS).find(([, v]) => v.objectType === k);
-    const keep = { colorAccent: P2.colorAccent, twoTone: P2.twoTone, showRefs: P2.showRefs, filament: P2.filament, infill: P2.infill, roughness: P2.roughness, sheen: P2.sheen, showGrid: P2.showGrid, viewMode: P2.viewMode };
-    P2 = { ...pre ? pre[1] : DEFAULTS, ...keep, objectType: k };
+    const keep = { colorAccent: P3.colorAccent, twoTone: P3.twoTone, showRefs: P3.showRefs, filament: P3.filament, infill: P3.infill, roughness: P3.roughness, sheen: P3.sheen, showGrid: P3.showGrid, viewMode: P3.viewMode };
+    P3 = { ...pre ? pre[1] : DEFAULTS, ...keep, objectType: k };
     syncUI();
     rebuild();
     fitCamera("iso");
@@ -1855,7 +2143,7 @@ function buildUI() {
   ps.innerHTML = `<option value="">\u2014 custom (${Object.keys(PRESETS).length} presets) \u2014</option>` + PRESET_GROUPS.map(([label, keys]) => `<optgroup label="${esc(label)} (${keys.length})">${keys.map((k) => `<option value="${esc(k)}">${esc(k)}</option>`).join("")}</optgroup>`).join("");
   const loadPreset = (k) => {
     if (!PRESETS[k]) return;
-    P2 = { ...PRESETS[k], viewMode: P2.viewMode };
+    P3 = { ...PRESETS[k], viewMode: P3.viewMode };
     syncUI();
     rebuild();
     fitCamera("iso");
@@ -1873,7 +2161,7 @@ function buildUI() {
 }
 function syncUI() {
   for (const k in ctrls) {
-    const c = ctrls[k], v = P2[k];
+    const c = ctrls[k], v = P3[k];
     if (c.r) {
       c.r.value = v;
       c.n.value = +(+v).toFixed(3);
@@ -1882,23 +2170,23 @@ function syncUI() {
     if (c.sel) c.sel.value = v;
     if (c.cb) c.cb.checked = !!v;
     if (c.ci) c.ci.value = v;
-    c.row.classList.toggle("hide", !(!c.p.show || c.p.show(P2)));
+    c.row.classList.toggle("hide", !(!c.p.show || c.p.show(P3)));
   }
   for (const det of $$("details.group")) {
     const g = SCHEMA.find((x) => x.id === det.dataset.gid);
-    det.style.display = g.show && !g.show(P2) ? "none" : "";
+    det.style.display = g.show && !g.show(P3) ? "none" : "";
   }
   for (const b of $$("[data-type]")) {
-    const on = b.dataset.type === P2.objectType;
+    const on = b.dataset.type === P3.objectType;
     b.classList.toggle("on", on);
     b.setAttribute("aria-checked", on);
   }
   const shape = (o) => JSON.stringify(Object.keys(o).filter((k) => k !== "viewMode" && !(PBY[k] && PBY[k].live)).sort().map((k) => [k, o[k]]));
-  const cur = shape(P2), pk = Object.keys(PRESETS).find((k) => shape(PRESETS[k]) === cur);
+  const cur = shape(P3), pk = Object.keys(PRESETS).find((k) => shape(PRESETS[k]) === cur);
   $("#presetSel").value = pk || "";
   syncColorMenu();
-  $("#openRange").value = P2.drawerOpen;
-  $("#openRange").style.setProperty("--p", `${P2.drawerOpen}%`);
+  $("#openRange").value = P3.drawerOpen;
+  $("#openRange").style.setProperty("--p", `${P3.drawerOpen}%`);
   syncToggles();
 }
 var PALETTE = [
@@ -1939,10 +2227,10 @@ function buildColorMenu() {
   $("#cqCustom").addEventListener("input", (e) => applyColor(e.target.value));
   $("#cqTwo").addEventListener("change", (e) => setParam("twoTone", e.target.checked, false));
   $("#cqSwap").onclick = () => {
-    const b = P2.colorBody;
-    P2.colorBody = P2.colorAccent;
-    P2.colorAccent = b;
-    P2.twoTone = true;
+    const b = P3.colorBody;
+    P3.colorBody = P3.colorAccent;
+    P3.colorAccent = b;
+    P3.twoTone = true;
     syncUI();
     updateMaterials();
     updateHUD();
@@ -1956,9 +2244,9 @@ function buildColorMenu() {
     const a = pick();
     let b = pick(), guard = 0;
     while ((a === b || Math.abs(lum(a) - lum(b)) < 0.18) && guard++ < 60) b = pick();
-    P2.colorBody = a;
-    P2.colorAccent = b;
-    P2.twoTone = true;
+    P3.colorBody = a;
+    P3.colorAccent = b;
+    P3.twoTone = true;
     syncUI();
     updateMaterials();
     updateHUD();
@@ -1978,16 +2266,16 @@ function buildColorMenu() {
   });
 }
 function applyColor(hex) {
-  P2[targetKey()] = hex.toLowerCase();
-  if (colorTarget === "interior") P2.twoTone = true;
+  P3[targetKey()] = hex.toLowerCase();
+  if (colorTarget === "interior") P3.twoTone = true;
   syncUI();
   updateMaterials();
   updateHUD();
 }
 function syncColorMenu() {
-  $("#cqDotBody").style.background = P2.colorBody;
-  $("#cqDotIn").style.background = P2.twoTone ? P2.colorAccent : P2.colorBody;
-  const cur = String(P2[targetKey()]).toLowerCase();
+  $("#cqDotBody").style.background = P3.colorBody;
+  $("#cqDotIn").style.background = P3.twoTone ? P3.colorAccent : P3.colorBody;
+  const cur = String(P3[targetKey()]).toLowerCase();
   for (const b of $$("[data-sw]")) {
     const on = b.dataset.sw === cur;
     b.classList.toggle("on", on);
@@ -2000,14 +2288,14 @@ function syncColorMenu() {
   }
   $("#cqCustom").value = cur;
   $("#cqHex").textContent = cur;
-  $("#cqTwo").checked = !!P2.twoTone;
+  $("#cqTwo").checked = !!P3.twoTone;
 }
 var lastCam = "iso";
 function syncToggles() {
-  for (const b of $$("[data-tog]")) b.classList.toggle("on", !!P2[b.dataset.tog]);
+  for (const b of $$("[data-tog]")) b.classList.toggle("on", !!P3[b.dataset.tog]);
   for (const b of $$("[data-cut]")) b.classList.toggle("on", b.dataset.cut === view.cut);
   for (const b of $$("[data-cam]")) b.classList.toggle("on", b.dataset.cam === lastCam);
-  for (const b of $$("[data-mode]")) b.classList.toggle("on", b.dataset.mode === P2.viewMode);
+  for (const b of $$("[data-mode]")) b.classList.toggle("on", b.dataset.mode === P3.viewMode);
   $("#themeBtn").textContent = view.theme === "dark" ? "Light" : "Dark";
   $("#fnameHint").textContent = model && model.parts.length > 1 ? `${model.parts.length} parts \xB7 print plate` : "print orientation";
 }
@@ -2022,7 +2310,7 @@ function scheduleRebuild(preview) {
   });
 }
 function setParam(key, value, live) {
-  P2[key] = value;
+  P3[key] = value;
   syncUI();
   const p = PBY[key];
   if (key === "drawerOpen") {
@@ -2067,7 +2355,7 @@ var today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 var slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-var fname = (ext, extra = "") => `deskkit-${P2.objectType}${extra ? "-" + extra : ""}-${today()}.${ext}`;
+var fname = (ext, extra = "") => `deskkit-${P3.objectType}${extra ? "-" + extra : ""}-${today()}.${ext}`;
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
@@ -2151,15 +2439,45 @@ function objData() {
     return `v ${rest} ${c.r.toFixed(4)} ${c.g.toFixed(4)} ${c.b.toFixed(4)}`;
   });
   G.dispose();
-  return `# DeskKit Studio 3D \u2014 ${P2.objectType}
+  return `# DeskKit Studio 3D \u2014 ${P3.objectType}
 # units: mm, Y-up, assembled
 ` + txt;
+}
+function fbxData() {
+  const twoTone = !!P3.twoTone;
+  const c = new THREE2.Color();
+  const parts = items.map((it) => {
+    const m = it.part.mesh, M = asmMatrix(it), v = new THREE2.Vector3();
+    const pos = new Float64Array(m.pos.length);
+    for (let i = 0; i < pos.length; i += 3) {
+      v.set(m.pos[i], m.pos[i + 1], m.pos[i + 2]).applyMatrix4(M);
+      pos[i] = v.x;
+      pos[i + 1] = v.y;
+      pos[i + 2] = v.z;
+    }
+    const triMat = twoTone ? Uint8Array.from(m.tag, (t) => t ? 1 : 0) : new Uint8Array(m.tag.length);
+    const col = it.geo.attributes.color.array, colors = new Float32Array(col.length);
+    for (let i = 0; i < col.length; i += 3) {
+      c.setRGB(col[i], col[i + 1], col[i + 2]).convertLinearToSRGB();
+      colors[i] = c.r;
+      colors[i + 1] = c.g;
+      colors[i + 2] = c.b;
+    }
+    return { name: it.part.name, pos, idx: m.idx, triMat, normals: it.geo.attributes.normal.array, colors };
+  });
+  const lin = (h) => {
+    const k = new THREE2.Color(h);
+    return [k.r, k.g, k.b];
+  };
+  const materials = [{ name: "Body", color: lin(P3.colorBody) }];
+  if (twoTone) materials.push({ name: "Interior", color: lin(P3.colorAccent) });
+  return writeFBX(parts, materials, { creator: "DeskKit Studio 3D" });
 }
 function glbData() {
   return new Promise((res, rej) => {
     const grp = new THREE2.Group();
     for (const it of items) {
-      const m = new THREE2.Mesh(it.geo, new THREE2.MeshStandardMaterial({ vertexColors: true, roughness: P2.roughness }));
+      const m = new THREE2.Mesh(it.geo, new THREE2.MeshStandardMaterial({ vertexColors: true, roughness: P3.roughness }));
       m.name = it.part.name;
       m.applyMatrix4(asmMatrix(it));
       grp.add(m);
@@ -2191,34 +2509,35 @@ function pngData() {
     }, "image/png");
   });
 }
-var jsonData = () => JSON.stringify({ app: "DeskKit Studio 3D", version: 1, date: today(), params: P2 }, null, 2);
+var jsonData = () => JSON.stringify({ app: "DeskKit Studio 3D", version: 1, date: today(), params: P3 }, null, 2);
 function guideText() {
-  const s = model.stats, dens = DENSITY[P2.filament] || 1.24, pv = printedVolume(model.parts, P2.infill);
-  const temps = { PLA: "200\u2013215 \xB0C / bed 60 \xB0C", "Silk PLA": "210\u2013225 \xB0C / bed 60 \xB0C, slower walls", "Wood PLA": "195\u2013210 \xB0C / bed 60 \xB0C, 0.6 mm nozzle recommended", PETG: "230\u2013245 \xB0C / bed 75\u201385 \xB0C", "ABS / ASA": "245\u2013260 \xB0C / bed 100 \xB0C, enclosure" }[P2.filament];
-  const L = [
+  const s = model.stats, dens = DENSITY[P3.filament] || 1.24, pv = printedVolume(model.parts, P3.infill);
+  const temps = { PLA: "200\u2013215 \xB0C / bed 60 \xB0C", "Silk PLA": "210\u2013225 \xB0C / bed 60 \xB0C, slower walls", "Wood PLA": "195\u2013210 \xB0C / bed 60 \xB0C, 0.6 mm nozzle recommended", PETG: "230\u2013245 \xB0C / bed 75\u201385 \xB0C", "ABS / ASA": "245\u2013260 \xB0C / bed 100 \xB0C, enclosure" }[P3.filament];
+  const L2 = [
     "DESKKIT STUDIO 3D \u2014 PRINT GUIDE",
     "=".repeat(36),
     `Generated ${today()}`,
     "",
-    `OBJECT   ${(OBJECT_TYPES.find((t) => t[0] === P2.objectType) || [])[1]}`,
-    `Filament \u2248 ${(pv / 1e3 * dens).toFixed(0)} g of ${P2.filament} at ${P2.infill}% infill (solid volume ${(s.volume / 1e3).toFixed(1)} cm3)`,
+    `OBJECT   ${(OBJECT_TYPES.find((t) => t[0] === P3.objectType) || [])[1]}`,
+    `Filament \u2248 ${(pv / 1e3 * dens).toFixed(0)} g of ${P3.filament} at ${P3.infill}% infill (solid volume ${(s.volume / 1e3).toFixed(1)} cm3)`,
     `Mesh     ${s.tris} triangles, ${s.watertight ? "watertight" : "NOT watertight"}`,
     model.capacity > 0 ? `Capacity ${model.capacity.toFixed(0)} ml` : "",
     "",
     "PARTS (all exported in print orientation \u2014 no supports needed)"
   ];
-  model.parts.forEach((p, i) => L.push(`  ${i + 1}. ${p.name}${p.printNote ? " \u2014 " + p.printNote : ""}`));
-  L.push("", "SLICER SETTINGS", "  Layer height ....... 0.20 mm (0.16 mm for finer curves)", "  Walls .............. 3 perimeters", "  Top / bottom ....... 4 / 4 layers", `  Infill ............. ${P2.infill}% gyroid or grid`, "  Supports ........... none", `  Elephant-foot comp.  ${P2.bottomChamfer >= 0.4 ? "0 (model has a " + P2.bottomChamfer.toFixed(1) + " mm bottom chamfer)" : "0.15\u20130.2 mm"}`, `  Temperatures ....... ${temps}`, "");
-  if (P2.objectType === "mini-drawer") L.push("ASSEMBLY", `  Slide the drawers into the case. Sliding clearance is ${P2.drawerClear} mm per side \u2014`, "  if a drawer binds, sand the sides lightly or reprint with +0.1 mm clearance.", "");
-  if (P2.objectType === "tray" && P2.trayFeet !== "none") L.push("UNDERSIDE", P2.trayFeet.startsWith("magnets") ? "  Press 6 \xD7 2 mm neodymium magnets into the four recesses (drop of CA glue)." : "  Stick 10 mm self-adhesive rubber bumpers into the four recesses.", "");
-  if (model.warnings.length) L.push("NOTES", ...model.warnings.map((w) => "  - " + w), "");
-  return L.filter((l) => l !== void 0).join("\n");
+  model.parts.forEach((p, i) => L2.push(`  ${i + 1}. ${p.name}${p.printNote ? " \u2014 " + p.printNote : ""}`));
+  L2.push("", "SLICER SETTINGS", "  Layer height ....... 0.20 mm (0.16 mm for finer curves)", "  Walls .............. 3 perimeters", "  Top / bottom ....... 4 / 4 layers", `  Infill ............. ${P3.infill}% gyroid or grid`, "  Supports ........... none", `  Elephant-foot comp.  ${P3.bottomChamfer >= 0.4 ? "0 (model has a " + P3.bottomChamfer.toFixed(1) + " mm bottom chamfer)" : "0.15\u20130.2 mm"}`, `  Temperatures ....... ${temps}`, "");
+  if (P3.objectType === "mini-drawer") L2.push("ASSEMBLY", `  Slide the drawers into the case. Sliding clearance is ${P3.drawerClear} mm per side \u2014`, "  if a drawer binds, sand the sides lightly or reprint with +0.1 mm clearance.", "");
+  if (P3.objectType === "tray" && P3.trayFeet !== "none") L2.push("UNDERSIDE", P3.trayFeet.startsWith("magnets") ? "  Press 6 \xD7 2 mm neodymium magnets into the four recesses (drop of CA glue)." : "  Stick 10 mm self-adhesive rubber bumpers into the four recesses.", "");
+  if (model.warnings.length) L2.push("NOTES", ...model.warnings.map((w) => "  - " + w), "");
+  return L2.filter((l) => l !== void 0).join("\n");
 }
 async function doExport(kind) {
   try {
     if (kind === "stl") download(stlOf(items, "plate"), fname("stl"), "model/stl");
     if (kind === "obj") download(objData(), fname("obj"), "text/plain");
     if (kind === "glb") download(await glbData(), fname("glb"), "model/gltf-binary");
+    if (kind === "fbx") download(fbxData(), fname("fbx"), "application/octet-stream");
     if (kind === "png") download(await pngData(), fname("png"), "image/png");
     if (kind === "json") download(jsonData(), fname("json"), "application/json");
     if (kind === "zip") {
@@ -2234,6 +2553,7 @@ async function doExport(kind) {
       });
       files[fname("obj")] = strToU8(objData());
       files[fname("glb")] = new Uint8Array(await glbData());
+      files[fname("fbx")] = fbxData();
       files[fname("png")] = new Uint8Array(await (await pngData()).arrayBuffer());
       files[fname("json")] = strToU8(jsonData());
       files["PRINT_GUIDE.txt"] = strToU8(guideText());
@@ -2254,14 +2574,14 @@ function resize() {
 }
 new ResizeObserver(resize).observe($("#view"));
 for (const b of $$("[data-cam]")) b.onclick = () => fitCamera(b.dataset.cam);
-for (const b of $$("[data-tog]")) b.onclick = () => setParam(b.dataset.tog, !P2[b.dataset.tog], false);
+for (const b of $$("[data-tog]")) b.onclick = () => setParam(b.dataset.tog, !P3[b.dataset.tog], false);
 for (const b of $$("[data-cut]")) b.onclick = () => {
   view.cut = b.dataset.cut;
   updateCut();
   syncToggles();
 };
 for (const b of $$("[data-mode]")) b.onclick = () => {
-  P2.viewMode = b.dataset.mode;
+  P3.viewMode = b.dataset.mode;
   place();
   syncToggles();
   fitCamera(lastCam);
@@ -2282,7 +2602,7 @@ $("#loadFile").addEventListener("change", async (e) => {
   try {
     const j = JSON.parse(await f.text()), src = j.params || j, next = { ...DEFAULTS };
     for (const k of Object.keys(DEFAULTS)) if (k in src && typeof src[k] === typeof DEFAULTS[k]) next[k] = src[k];
-    P2 = next;
+    P3 = next;
     syncUI();
     rebuild();
     fitCamera("iso");
@@ -2307,7 +2627,7 @@ updateMaterials();
 fitCamera("iso");
 loop();
 window.__dk = { get P() {
-  return P2;
+  return P3;
 }, get model() {
   return model;
 }, setParam, doExport, fitCamera, view, guideText };
