@@ -1,0 +1,18 @@
+{
+  "name": "furniture-studio",
+  "version": "1.0.0",
+  "description": "Parametric 3D furniture & household object generator with FBX export",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@fontsource/bricolage-grotesque": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/ibm-plex-sans": "^5.1.0",
+    "esbuild": "^0.24.0",
+    "three": "^0.160.0"
+  },
+  "private": true,
+  "type": "module"
+}
