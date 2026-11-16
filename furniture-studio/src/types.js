@@ -1542,3 +1542,15 @@ export function defaults(type) {
   return o;
 }
 export function allParams(type) { return TYPES[type].schema.flatMap((g) => g.params); }
+
+// shared with the extended catalogue (types2.js / types3.js)
+export {
+  R, S, C, G, pick, SHAPES, EDGES, SHADES, legGroup, handleGroup, topGroup, isMetal,
+  chairSchema, buildChair, stoolSchema, buildStool, sideSchema, buildSide, coffeeSchema, buildCoffee,
+  deskSchema, buildDesk, cabinetBody, fillBooks, shade, mirrorShape, BOOK_MATS, baseFor, buildTV, buildTableLamp,
+};
+/** Copy a schema with new default values and (optionally) new [min, max] ranges. */
+export function withDefaults(schema, vals = {}, ranges = {}) {
+  return schema.map((g) => ({ ...g, params: g.params.map((p) => ({ ...p, ...(p.k in vals ? { v: vals[p.k] } : {}), ...(ranges[p.k] ? { min: ranges[p.k][0], max: ranges[p.k][1] } : {}) })) }));
+}
+export const schemaDefaults = (schema) => Object.fromEntries(schema.flatMap((g) => g.params).map((p) => [p.k, p.v]));

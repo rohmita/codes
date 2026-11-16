@@ -5,7 +5,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { zipSync, strToU8 } from 'three/addons/libs/fflate.module.js';
 import { Builder } from './geo.js';
-import { TYPES, CATEGORIES, defaults, allParams } from './types.js';
+import { TYPES, CATEGORIES, defaults, allParams } from './catalog.js';
 import { exportFBX } from './fbx.js';
 import { makeTextures } from './textures.js';
 
@@ -102,6 +102,13 @@ function makeMats() {
   mats.interior = mk('Interior', { color: '#f2f2f0', roughness: 0.4 });
   mats.dekor = mk('Keramik', { color: '#e6ded0', roughness: 0.2, clearcoat: 0.6 });
   mats.logamGelap = mk('Logam_gelap', { color: '#6d7075', roughness: 0.35, metalness: 0.9 });
+  mats.keramik = mk('Keramik_putih', { color: '#f6f6f3', roughness: 0.1, clearcoat: 0.8 });
+  mats.air = mk('Air', { color: '#bfe3ea', roughness: 0.02, transmission: 0.9, thickness: 2, ior: 1.33 });
+  mats.galon = mk('Galon', { color: '#a9d3ea', roughness: 0.05, transmission: 0.85, thickness: 0.6 });
+  mats.dinding = mk('Dinding', { color: '#e8e3da', roughness: 0.95 });
+  mats.merah = mk('Merah', { color: '#c2362d', roughness: 0.35 });
+  mats.biru = mk('Biru', { color: '#2f6fb5', roughness: 0.35 });
+  mats.layarMenyala = mk('Layar_menyala_polos', { color: '#000000', roughness: 0.15, emissive: '#3d6fa8', emissiveIntensity: 1 });
   ['#8a3b2e', '#2f4a66', '#c9a25e', '#4f6e57', '#e8e0cf', '#3a3532'].forEach((c, i) => { mats['buku' + (i + 1)] = mk('Buku_' + (i + 1), { color: c, roughness: 0.75 }); });
   return mats;
 }
@@ -217,7 +224,7 @@ function rebuild() {
   sun.position.set(ctr.x + R * 0.6, R * 2.2 + s.y, ctr.z + R * 0.9); sun.target.position.copy(ctr);
   Object.assign(sun.shadow.camera, { left: -R * 1.3, right: R * 1.3, top: R * 1.3, bottom: -R * 1.3, near: 1, far: R * 6 });
   sun.shadow.camera.updateProjectionMatrix();
-  model.traverse((m) => { if (m.isMesh) m.castShadow = state.view.shadow; });
+  model.traverse((m) => { if (m.isMesh) m.castShadow = state.view.shadow && !m.userData.noShadow; });
   updHud(); updDims();
   $('#busy').hidden = true;
 }
@@ -283,6 +290,8 @@ function loop() {
 
 // ---------------------------------------------------------------- thumbnails
 const thumbs = {};
+let thumbQueue = [];
+let query = '';
 function makeThumbs() {
   const W = 192, H = 144;
   const r2 = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -294,9 +303,10 @@ function makeThumbs() {
   const l = new THREE.DirectionalLight('#fff4e6', 1.8); l.position.set(1, 2, 1.6); sc.add(l);
   const cam = new THREE.PerspectiveCamera(30, W / H, 1, 10000);
   const tm = makeMats();
-  const queue = [state.type, ...typeKeys.filter((k) => k !== state.type)];
+  thumbQueue = [state.type, ...typeKeys.filter((k) => TYPES[k].cat === state.cat && k !== state.type), ...typeKeys.filter((k) => TYPES[k].cat !== state.cat)];
   const step = () => {
-    const t = queue.shift(); if (!t) { r2.dispose(); return; }
+    const t = thumbQueue.shift(); if (!t) { r2.dispose(); return; }
+    if (thumbs[t]) { setTimeout(step, 0); return; }
     for (const s of SLOT_ORDER) finishMaterial(tm[s], TYPES[t].mats[s] || { c: '#cfe3e0', f: s === 'kaca' ? 'kaca' : 'satin' });
     const b = new Builder(tm, 0.6);
     try { TYPES[t].build(b, defaults(t)); } catch (e) { console.error(t, e); }
@@ -319,14 +329,23 @@ function makeThumbs() {
 function renderCats() {
   const nav = $('#cats'); nav.innerHTML = '';
   for (const c of CATEGORIES) {
-    const b = el('button', { class: 'cat', 'aria-pressed': String(c.id === state.cat) }, c.label);
-    b.onclick = () => { state.cat = c.id; renderCats(); renderTypes(); };
+    const n = typeKeys.filter((k) => TYPES[k].cat === c.id).length;
+    const b = el('button', { class: 'cat', 'aria-pressed': String(!query && c.id === state.cat) }, `${c.label}<span>${n}</span>`);
+    b.onclick = () => { state.cat = c.id; query = ''; $('#search').value = ''; renderCats(); renderTypes(); };
     nav.append(b);
   }
 }
+const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g, '');
 function renderTypes() {
   const box = $('#types'); box.innerHTML = '';
-  for (const t of typeKeys.filter((k) => TYPES[k].cat === state.cat)) {
+  const q = norm(query.trim());
+  const list = q
+    ? typeKeys.filter((k) => norm(TYPES[k].label + ' ' + k).includes(q) || norm(CATEGORIES.find((c) => c.id === TYPES[k].cat)?.label || '').split(' ').some((w) => w === q))
+    : typeKeys.filter((k) => TYPES[k].cat === state.cat);
+  // load visible thumbnails first
+  thumbQueue = [...list.filter((k) => !thumbs[k]), ...thumbQueue.filter((k) => !list.includes(k))];
+  if (!list.length) box.append(el('p', { class: 'empty' }, 'Tidak ada yang cocok.'));
+  for (const t of list) {
     const b = el('button', { class: 'type', 'data-t': t, role: 'listitem', 'aria-pressed': String(t === state.type) },
       `<span class="th">${thumbs[t] ? `<img alt="" src="${thumbs[t]}">` : '<i></i>'}</span>${TYPES[t].label}`);
     b.onclick = () => selectType(t);
@@ -493,7 +512,7 @@ $$('[data-tog]').forEach((cb) => {
     if (grid) grid.visible = state.view.grid;
     ground.visible = state.view.shadow;
     renderer.shadowMap.enabled = state.view.shadow;
-    model.traverse((m) => { if (m.isMesh) m.castShadow = state.view.shadow; });
+    model.traverse((m) => { if (m.isMesh) m.castShadow = state.view.shadow && !m.userData.noShadow; });
     for (const k in mats) { mats[k].wireframe = state.view.wire; mats[k].needsUpdate = true; }
     updDims(); persist();
   };
@@ -524,6 +543,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => se
 $('#collapseBtn').onclick = () => { $('#app').classList.add('collapsed'); $('#showPanel').hidden = false; };
 $('#showPanel').onclick = () => { $('#app').classList.remove('collapsed'); $('#showPanel').hidden = true; };
 
+$('#search').oninput = (e) => { query = e.target.value; renderCats(); renderTypes(); };
+$('#typeCount').textContent = `${typeKeys.length} jenis`;
 $('#resetBtn').onclick = () => { state.per[state.type] = freshType(state.type); renderAll(); schedule(); pushHist(true); toast('Kembali ke bawaan'); };
 $('#undoBtn').onclick = undo; $('#redoBtn').onclick = redo;
 
@@ -679,4 +700,4 @@ pushHist(true);
 updHistBtns();
 loop();
 makeThumbs();
-window.__fs = { state, rebuild, model: () => model, exportFBX: () => exportFBX(model, 'Test'), selectType, randomize, frame };
+window.__fs = { state, rebuild, model: () => model, exportFBX: () => exportFBX(model, 'Test'), selectType, randomize, frame, types: typeKeys };

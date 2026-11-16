@@ -56,14 +56,23 @@ button { cursor: pointer; }
 .iconbtn:hover { color: var(--fg); background: var(--panel-2); }
 .iconbtn svg { width: 17px; height: 17px; }
 
-.cats { display: flex; gap: 4px; padding: 0 12px 8px; overflow-x: auto; scrollbar-width: none; }
+.search { margin: 0 12px 8px; position: relative; }
+.search input { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 6px 30px; font-size: 12.5px; }
+.search input:focus { outline: none; border-color: var(--accent); }
+.search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--faint); pointer-events: none; }
+.search input:not(:placeholder-shown) + small { display: none; }
+.search small { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 10.5px var(--mono); color: var(--faint); pointer-events: none; }
+.cats { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 10px; }
 .cats::-webkit-scrollbar { display: none; }
-.cat { flex: none; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 10px; font: 500 12px var(--font); color: var(--muted); white-space: nowrap; }
+.cat { flex: none; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 9px; font: 500 11.5px var(--font); color: var(--muted); white-space: nowrap; display: inline-flex; gap: 5px; align-items: baseline; }
+.cat span { font: 500 10px var(--mono); color: var(--faint); }
+.cat[aria-pressed="true"] span { color: inherit; opacity: .65; }
 .cat:hover { color: var(--fg); border-color: var(--line-2); }
 .cat[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--panel); }
 
-.types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 2px 12px 12px; border-bottom: 1px solid var(--line); }
-.type { border: 1px solid var(--line); background: var(--panel-2); border-radius: 9px; padding: 0 0 5px; display: grid; gap: 1px; text-align: center; font: 500 11px/1.2 var(--font); color: var(--muted); overflow: hidden; }
+.types { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 2px 12px 12px; border-bottom: 1px solid var(--line); max-height: 252px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.types .empty { grid-column: 1 / -1; margin: 6px 0; color: var(--faint); font-size: 12px; }
+.type { border: 1px solid var(--line); background: var(--panel-2); border-radius: 8px; padding: 0 2px 5px; display: grid; gap: 1px; align-content: start; text-align: center; font: 500 10.5px/1.2 var(--font); color: var(--muted); overflow: hidden; }
 .type .th { aspect-ratio: 4 / 3; display: grid; place-items: center; }
 .type .th img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .type .th i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--accent); animation: spin 0.9s linear infinite; }
@@ -190,7 +199,7 @@ select { width: 100%; appearance: none; background: var(--panel-2) url("data:ima
   .hint { display: none; }
   .hud { left: 8px; bottom: 8px; font-size: 10.5px; }
   .hud .tris { display: none; }
-  .types { grid-template-columns: repeat(4, 1fr); }
+  .types { grid-template-columns: repeat(5, 1fr); max-height: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -204,6 +213,7 @@ select { width: 100%; appearance: none; background: var(--panel-2) url("data:ima
       <span class="sp"></span>
       <button class="iconbtn collapse-btn" id="collapseBtn" title="Sembunyikan panel" aria-label="Sembunyikan panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 10l-2 2 2 2"/></svg></button>
     </div>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search" type="search" placeholder="Cari furnitur…" aria-label="Cari furnitur" autocomplete="off"><small id="typeCount"></small></div>
     <nav class="cats" id="cats" aria-label="Kategori"></nav>
     <div class="types" id="types" role="list"></div>
     <div class="scroll" id="scroll">
